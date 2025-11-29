@@ -1,6 +1,6 @@
-use director::scripting::register_rhai_api;
+use director_engine::scripting::register_rhai_api;
 use rhai::Engine;
-use director::render::render_export;
+use director_engine::render::render_export;
 use std::path::PathBuf;
 
 fn main() {
@@ -28,7 +28,7 @@ fn main() {
         movie
     "##;
 
-    match engine.eval::<director::scripting::MovieHandle>(script) {
+    match engine.eval::<director_engine::scripting::MovieHandle>(script) {
         Ok(movie) => {
             println!("Script evaluated successfully. Starting render...");
             let mut director = movie.director.lock().unwrap();

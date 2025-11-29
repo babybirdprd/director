@@ -28,9 +28,11 @@ graph TD
 
 ## 🚀 Setup & Installation
 
-### Prerequisites
-*   **Rust**: Stable toolchain.
-*   **FFmpeg**: Required for video encoding.
+### System Dependencies
+Since this crate depends on `skia-safe` and `video-rs` (ffmpeg), anyone who tries to `cargo install` or build this crate will need these system dependencies installed first.
+
+*   **Skia**: Requires LLVM/Clang to build bindings, though `skia-safe` often downloads pre-built binaries.
+*   **FFmpeg**: **Required** for video encoding. The default feature set includes `video-rs`, which links against system FFmpeg libraries.
     *   **Ubuntu**: `sudo apt install libavutil-dev libavformat-dev libavcodec-dev libswscale-dev`
     *   **MacOS**: `brew install ffmpeg`
 
