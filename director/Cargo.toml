@@ -1,7 +1,12 @@
 [package]
-name = "director"
+name = "director-engine"
 version = "0.1.0"
 edition = "2021"
+description = "A high-performance 2D rendering engine using Skia and Taffy"
+license = "MIT"
+repository = "https://github.com/babybirdprd/rust-skia-engine"
+keywords = ["graphics", "skia", "rendering", "video"]
+categories = ["rendering", "multimedia::video"]
 
 [dependencies]
 skia-safe = "0.90.0"
@@ -22,5 +27,5 @@ default = ["video-rs"]
 mock_video = []
 
 [[bin]]
-name = "main"
+name = "director-engine"
 path = "src/main.rs"
