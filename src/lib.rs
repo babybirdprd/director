@@ -17,3 +17,16 @@ pub mod video_wrapper;
 pub use director::Director;
 pub use element::Element;
 // node::Node is not defined in node.rs, only specific nodes.
+
+use anyhow::Result;
+
+pub trait AssetLoader: Send + Sync {
+    fn load_bytes(&self, path: &str) -> Result<Vec<u8>>;
+}
+
+pub struct DefaultAssetLoader;
+impl AssetLoader for DefaultAssetLoader {
+    fn load_bytes(&self, path: &str) -> Result<Vec<u8>> {
+        Ok(std::fs::read(path)?)
+    }
+}
