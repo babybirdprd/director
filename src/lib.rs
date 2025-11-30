@@ -14,6 +14,7 @@ pub mod layout;
 pub mod scripting;
 pub mod video_wrapper;
 pub mod audio;
+pub mod tokens;
 
 pub use director::Director;
 pub use element::Element;
