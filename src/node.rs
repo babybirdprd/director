@@ -1,4 +1,4 @@
-use skia_safe::{Canvas, Paint, Rect, Image, Color4f, Data, TextBlob, FontMgr, FontStyle, ColorType, AlphaType};
+use skia_safe::{Canvas, Paint, Rect, RRect, ClipOp, PaintStyle, Image, Color4f, Data, TextBlob, FontMgr, FontStyle, ColorType, AlphaType};
 use taffy::style::Style;
 use crate::element::{Element, Color, TextSpan};
 use crate::animation::{Animated, EasingType};
@@ -35,6 +35,11 @@ pub struct BoxNode {
     pub shadow_blur: Animated<f32>,
     pub shadow_offset_x: Animated<f32>,
     pub shadow_offset_y: Animated<f32>,
+    // New fields
+    pub border_radius: Animated<f32>,
+    pub border_width: Animated<f32>,
+    pub border_color: Option<Animated<Color>>,
+    pub overflow: String,
 }
 
 impl BoxNode {
@@ -48,6 +53,10 @@ impl BoxNode {
             shadow_blur: Animated::new(0.0),
             shadow_offset_x: Animated::new(0.0),
             shadow_offset_y: Animated::new(0.0),
+            border_radius: Animated::new(0.0),
+            border_width: Animated::new(0.0),
+            border_color: None,
+            overflow: "visible".to_string(),
         }
     }
 }
@@ -67,16 +76,30 @@ impl Element for BoxNode {
             sc.update(time);
             changed = true;
         }
+        if let Some(bc) = &mut self.border_color {
+            bc.update(time);
+            changed = true;
+        }
         self.opacity.update(time);
         self.blur.update(time);
         self.shadow_blur.update(time);
         self.shadow_offset_x.update(time);
         self.shadow_offset_y.update(time);
+        self.border_radius.update(time);
+        self.border_width.update(time);
         changed
     }
 
-    fn render(&self, canvas: &Canvas, rect: Rect, opacity: f32) {
+    fn render(&self, canvas: &Canvas, rect: Rect, opacity: f32, draw_children: &mut dyn FnMut(&Canvas)) {
         let local_opacity = self.opacity.current_value * opacity;
+        let radius = self.border_radius.current_value;
+        let rrect = RRect::new_rect_xy(&rect, radius, radius);
+
+        canvas.save();
+
+        if self.overflow == "hidden" {
+            canvas.clip_rrect(rrect, ClipOp::Intersect, true);
+        }
 
         let mut paint = Paint::default();
         paint.set_anti_alias(true);
@@ -117,7 +140,33 @@ impl Element for BoxNode {
             let mut c = bg.current_value;
             c.a *= local_opacity;
             paint.set_color4f(c.to_color4f(), None);
-            canvas.draw_rect(rect, &paint);
+            canvas.draw_rrect(rrect, &paint);
+        }
+
+        // Draw children (clipped if overflow: hidden)
+        draw_children(canvas);
+
+        canvas.restore(); // Restore clip and transform (except we didn't transform here, but clip)
+
+        // Draw Border
+        let bw = self.border_width.current_value;
+        if bw > 0.0 {
+            let mut border_paint = Paint::default();
+            border_paint.set_anti_alias(true);
+            border_paint.set_style(PaintStyle::Stroke);
+            border_paint.set_stroke_width(bw);
+
+            let color = if let Some(bc) = &self.border_color {
+                bc.current_value
+            } else {
+                Color::BLACK
+            };
+
+            let mut c = color;
+            c.a *= local_opacity;
+            border_paint.set_color4f(c.to_color4f(), None);
+
+            canvas.draw_rrect(rrect, &border_paint);
         }
     }
 
@@ -129,6 +178,8 @@ impl Element for BoxNode {
             "shadow_blur" => self.shadow_blur.add_segment(start, target, duration, ease_fn),
             "shadow_x" => self.shadow_offset_x.add_segment(start, target, duration, ease_fn),
             "shadow_y" => self.shadow_offset_y.add_segment(start, target, duration, ease_fn),
+            "border_radius" => self.border_radius.add_segment(start, target, duration, ease_fn),
+            "border_width" => self.border_width.add_segment(start, target, duration, ease_fn),
             _ => {}
         }
     }
@@ -234,7 +285,7 @@ impl Element for TextNode {
         true
     }
 
-    fn render(&self, canvas: &Canvas, rect: Rect, _opacity: f32) {
+    fn render(&self, canvas: &Canvas, rect: Rect, _opacity: f32, draw_children: &mut dyn FnMut(&Canvas)) {
         let mut buf_guard = self.buffer.lock().unwrap();
         let _sc_guard = self.swash_cache.lock().unwrap();
 
@@ -259,6 +310,7 @@ impl Element for TextNode {
                  }
              }
         }
+        draw_children(canvas);
     }
 
     fn animate_property(&mut self, property: &str, start: f32, target: f32, duration: f64, easing: &str) {
@@ -302,7 +354,7 @@ impl Element for ImageNode {
         true
     }
 
-    fn render(&self, canvas: &Canvas, rect: Rect, parent_opacity: f32) {
+    fn render(&self, canvas: &Canvas, rect: Rect, parent_opacity: f32, draw_children: &mut dyn FnMut(&Canvas)) {
         let op = self.opacity.current_value * parent_opacity;
         let mut paint = Paint::new(Color4f::new(1.0, 1.0, 1.0, op), None);
         paint.set_anti_alias(true);
@@ -314,6 +366,7 @@ impl Element for ImageNode {
              );
              canvas.draw_image_rect_with_sampling_options(img, None, rect, sampling, &paint);
         }
+        draw_children(canvas);
     }
 
     fn animate_property(&mut self, property: &str, start: f32, target: f32, duration: f64, easing: &str) {
@@ -460,7 +513,7 @@ impl Element for VideoNode {
         true
     }
 
-    fn render(&self, canvas: &Canvas, rect: Rect, parent_opacity: f32) {
+    fn render(&self, canvas: &Canvas, rect: Rect, parent_opacity: f32, draw_children: &mut dyn FnMut(&Canvas)) {
          let op = self.opacity.current_value * parent_opacity;
 
          let current = self.current_frame.lock().unwrap();
@@ -472,6 +525,7 @@ impl Element for VideoNode {
              p.set_alpha_f(op);
              canvas.draw_rect(rect, &p);
          }
+         draw_children(canvas);
     }
 
     fn animate_property(&mut self, property: &str, start: f32, target: f32, duration: f64, easing: &str) {

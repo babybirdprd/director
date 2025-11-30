@@ -217,6 +217,22 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
         if let Some(v) = props.get("shadow_y").and_then(|v| v.as_float().ok()) {
             box_node.shadow_offset_y = crate::animation::Animated::new(v as f32);
         }
+        if let Some(v) = props.get("border_radius").and_then(|v| v.as_float().ok()) {
+            box_node.border_radius = crate::animation::Animated::new(v as f32);
+        }
+        if let Some(v) = props.get("border_width").and_then(|v| v.as_float().ok()) {
+            box_node.border_width = crate::animation::Animated::new(v as f32);
+        }
+        if let Some(c) = props.get("border_color") {
+             if let Ok(s) = c.clone().into_string() {
+                 if let Some(color) = parse_hex_color(&s) {
+                     box_node.border_color = Some(crate::animation::Animated::new(color));
+                 }
+             }
+        }
+        if let Some(s) = props.get("overflow").and_then(|v| v.clone().into_string().ok()) {
+            box_node.overflow = s;
+        }
 
         parse_layout_style(&props, &mut box_node.style);
 

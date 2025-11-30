@@ -68,7 +68,7 @@ pub trait Element: std::fmt::Debug {
     fn update(&mut self, time: f64) -> bool;
 
     // 3. Render Phase
-    fn render(&self, canvas: &Canvas, layout_rect: Rect, opacity: f32);
+    fn render(&self, canvas: &Canvas, layout_rect: Rect, opacity: f32, draw_children: &mut dyn FnMut(&Canvas));
 
     // 4. Animation Interface
     fn animate_property(&mut self, property: &str, start: f32, target: f32, duration: f64, easing: &str);

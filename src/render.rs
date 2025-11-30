@@ -200,11 +200,14 @@ fn render_recursive(director: &Director, node_id: crate::director::NodeId, canva
          canvas.translate((dx, dy));
 
          let local_rect = skia_safe::Rect::from_wh(node.layout_rect.width(), node.layout_rect.height());
-         node.element.render(canvas, local_rect, parent_opacity);
 
-         for child_id in &node.children {
-             render_recursive(director, *child_id, canvas, parent_opacity);
-         }
+         let mut draw_children = |canvas: &skia_safe::Canvas| {
+             for child_id in &node.children {
+                 render_recursive(director, *child_id, canvas, parent_opacity);
+             }
+         };
+
+         node.element.render(canvas, local_rect, parent_opacity, &mut draw_children);
 
          canvas.restore();
     }
