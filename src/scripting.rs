@@ -1,6 +1,6 @@
 use rhai::{Engine, Map, Module};
 use crate::director::{Director, NodeId, TimelineItem, PathAnimationState, Transition, TransitionType};
-use crate::node::{BoxNode, TextNode, ImageNode, VideoNode};
+use crate::node::{BoxNode, TextNode, ImageNode, VideoNode, CompositionNode};
 use crate::video_wrapper::RenderMode;
 use crate::element::{Color, TextSpan, GradientConfig};
 use crate::animation::{Animated, EasingType};
@@ -145,6 +145,7 @@ fn parse_text_style(map: &rhai::Map, span: &mut TextSpan) {
 fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
     let to_dim = |v: &rhai::Dynamic| -> Option<Dimension> {
         if let Ok(f) = v.as_float() { Some(Dimension::length(f as f32)) }
+        else if let Ok(i) = v.as_int() { Some(Dimension::length(i as f32)) }
         else if let Ok(s) = v.clone().into_string() {
             if s == "auto" { Some(Dimension::auto()) }
             else if s.ends_with("%") {
@@ -200,6 +201,7 @@ fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
     // Padding/Margin
     let to_lp = |v: &rhai::Dynamic| -> Option<LengthPercentage> {
         if let Ok(f) = v.as_float() { Some(LengthPercentage::length(f as f32)) }
+        else if let Ok(i) = v.as_int() { Some(LengthPercentage::length(i as f32)) }
         else if let Ok(s) = v.clone().into_string() {
              if s.ends_with("%") {
                 if let Ok(p) = s.trim_end_matches('%').parse::<f32>() {
@@ -215,6 +217,7 @@ fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
 
     let to_lpa = |v: &rhai::Dynamic| -> Option<LengthPercentageAuto> {
          if let Ok(f) = v.as_float() { Some(LengthPercentageAuto::length(f as f32)) }
+         else if let Ok(i) = v.as_int() { Some(LengthPercentageAuto::length(i as f32)) }
          else if let Ok(s) = v.clone().into_string() {
              if s == "auto" { Some(LengthPercentageAuto::auto()) }
              else if s.ends_with("%") {
@@ -605,6 +608,55 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
          let mut d = scene.director.lock().unwrap();
          let id = d.add_node(Box::new(text_node));
+         d.add_child(scene.root_id, id);
+
+         NodeHandle { director: scene.director.clone(), id }
+    });
+
+    engine.register_fn("add_composition", |scene: &mut SceneHandle, comp_def: MovieHandle| {
+         // Cycle Detection
+         if Arc::ptr_eq(&scene.director, &comp_def.director) {
+             eprintln!("Error: Cycle detected. A composition cannot contain itself.");
+             return NodeHandle { director: scene.director.clone(), id: 0 };
+         }
+
+         let inner_director = comp_def.director.lock().unwrap().clone();
+
+         let comp_node = CompositionNode {
+             internal_director: Mutex::new(inner_director),
+             start_offset: 0.0,
+             surface_cache: Mutex::new(None),
+             style: Style::default(),
+         };
+
+         let mut d = scene.director.lock().unwrap();
+         let id = d.add_node(Box::new(comp_node));
+         d.add_child(scene.root_id, id);
+
+         NodeHandle { director: scene.director.clone(), id }
+    });
+
+    engine.register_fn("add_composition", |scene: &mut SceneHandle, comp_def: MovieHandle, props: rhai::Map| {
+         // Cycle Detection
+         if Arc::ptr_eq(&scene.director, &comp_def.director) {
+             eprintln!("Error: Cycle detected. A composition cannot contain itself.");
+             return NodeHandle { director: scene.director.clone(), id: 0 };
+         }
+
+         let inner_director = comp_def.director.lock().unwrap().clone();
+
+         let mut style = Style::default();
+         parse_layout_style(&props, &mut style);
+
+         let comp_node = CompositionNode {
+             internal_director: Mutex::new(inner_director),
+             start_offset: 0.0,
+             surface_cache: Mutex::new(None),
+             style,
+         };
+
+         let mut d = scene.director.lock().unwrap();
+         let id = d.add_node(Box::new(comp_node));
          d.add_child(scene.root_id, id);
 
          NodeHandle { director: scene.director.clone(), id }

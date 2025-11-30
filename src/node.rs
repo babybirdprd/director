@@ -1,11 +1,14 @@
 use skia_safe::{
     Canvas, Paint, Rect, RRect, ClipOp, PaintStyle, Image, Color4f, Data, FontMgr,
     FontStyle, ColorType, AlphaType, Path, Point, gradient_shader, TileMode, Matrix, TextBlobBuilder,
-    font_style::{Weight as SkWeight, Width as SkWidth, Slant as SkSlant}
+    font_style::{Weight as SkWeight, Width as SkWidth, Slant as SkSlant}, Surface
 };
 use taffy::style::Style;
 use crate::element::{Element, Color, TextSpan};
 use crate::animation::{Animated, EasingType};
+use crate::director::Director;
+use crate::layout::LayoutEngine;
+use crate::render::render_recursive;
 use cosmic_text::{Buffer, FontSystem, Metrics, SwashCache, Attrs, AttrsList, Shaping, Weight, Style as CosmicStyle, Family};
 use std::sync::{Arc, Mutex};
 use std::fmt;
@@ -30,7 +33,7 @@ fn parse_easing(e: &str) -> EasingType {
 }
 
 // --- Box Node ---
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BoxNode {
     pub style: Style,
     pub bg_color: Option<Animated<Color>>,
@@ -192,7 +195,7 @@ impl Element for BoxNode {
 
 // --- Text Node ---
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TextAnimator {
     pub range: Range<usize>, // Grapheme indices
     pub property: String,    // "offset_x", "offset_y", "rotation", "scale", "opacity"
@@ -209,6 +212,21 @@ pub struct TextNode {
     // RFC 009
     pub animators: Vec<TextAnimator>,
     pub grapheme_starts: Vec<usize>, // Byte offsets of each grapheme start
+}
+
+impl Clone for TextNode {
+    fn clone(&self) -> Self {
+        Self {
+            spans: self.spans.clone(),
+            default_font_size: self.default_font_size.clone(),
+            default_color: self.default_color.clone(),
+            buffer: Mutex::new(None), // Reset buffer
+            font_system: self.font_system.clone(),
+            swash_cache: self.swash_cache.clone(),
+            animators: self.animators.clone(),
+            grapheme_starts: self.grapheme_starts.clone(),
+        }
+    }
 }
 
 impl fmt::Debug for TextNode {
@@ -597,7 +615,7 @@ impl Element for TextNode {
 }
 
 // --- Image Node ---
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImageNode {
     pub image: Option<Image>,
     pub opacity: Animated<f32>,
@@ -658,6 +676,25 @@ pub struct VideoNode {
     // Keep temp file alive
     #[allow(dead_code)]
     temp_file: Arc<NamedTempFile>,
+}
+
+impl Clone for VideoNode {
+    fn clone(&self) -> Self {
+        let decoder = if self.decoder.is_some() {
+             // Create new decoder pointing to same file.
+             AsyncDecoder::new(self.temp_file.path().to_owned(), self.render_mode).ok()
+        } else {
+             None
+        };
+
+        Self {
+            opacity: self.opacity.clone(),
+            current_frame: Mutex::new(None),
+            decoder,
+            render_mode: self.render_mode,
+            temp_file: self.temp_file.clone(),
+        }
+    }
 }
 
 impl VideoNode {
@@ -743,5 +780,117 @@ impl Element for VideoNode {
          if property == "opacity" {
              self.opacity.add_segment(start, target, duration, ease_fn);
          }
+    }
+}
+
+// --- Composition Node (RFC 010) ---
+
+pub struct CompositionNode {
+    pub internal_director: Mutex<Director>,
+    pub start_offset: f64,
+    pub surface_cache: Mutex<Option<Surface>>,
+    pub style: Style,
+}
+
+impl Clone for CompositionNode {
+    fn clone(&self) -> Self {
+        let dir = self.internal_director.lock().unwrap().clone();
+        Self {
+            internal_director: Mutex::new(dir),
+            start_offset: self.start_offset,
+            surface_cache: Mutex::new(None),
+            style: self.style.clone(),
+        }
+    }
+}
+
+impl fmt::Debug for CompositionNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CompositionNode")
+         .field("start_offset", &self.start_offset)
+         .finish()
+    }
+}
+
+impl Element for CompositionNode {
+    fn layout_style(&self) -> Style {
+        self.style.clone()
+    }
+
+    fn update(&mut self, time: f64) -> bool {
+        let comp_time = time - self.start_offset;
+        #[allow(unused_mut)]
+        let mut d = self.internal_director.lock().unwrap();
+        d.update(comp_time);
+
+        let mut layout_engine = LayoutEngine::new();
+        layout_engine.compute_layout(&mut d, comp_time);
+
+        true
+    }
+
+    fn render(&self, canvas: &Canvas, rect: Rect, opacity: f32, draw_children: &mut dyn FnMut(&Canvas)) {
+        let mut d = self.internal_director.lock().unwrap();
+
+        let width = d.width;
+        let height = d.height;
+
+        let mut surface_opt = self.surface_cache.lock().unwrap();
+
+        // Recreate surface if needed
+        let need_new = if let Some(s) = surface_opt.as_ref() {
+             s.width() != width || s.height() != height
+        } else {
+             true
+        };
+
+        if need_new {
+             let info = skia_safe::ImageInfo::new(
+                (width, height),
+                ColorType::RGBA8888,
+                AlphaType::Premul,
+                Some(skia_safe::ColorSpace::new_srgb()),
+             );
+             *surface_opt = skia_safe::surfaces::raster(&info, None, None);
+        }
+
+        if let Some(surface) = surface_opt.as_mut() {
+            // Render internal director to surface
+             let c = surface.canvas();
+             c.clear(skia_safe::Color::TRANSPARENT);
+
+             // Reuse render logic
+             let current_time = d.nodes.iter().flatten().next().map(|n| n.last_visit_time).unwrap_or(0.0);
+
+             let mut items: Vec<(usize, crate::director::TimelineItem)> = d.timeline.iter().cloned().enumerate()
+                 .filter(|(_, item)| current_time >= item.start_time && current_time < item.start_time + item.duration)
+                 .collect();
+             items.sort_by_key(|(_, item)| item.z_index);
+
+             for (_, item) in items {
+                 render_recursive(&d, item.scene_root, c, 1.0);
+             }
+
+             // Now draw surface to main canvas
+             let image = surface.image_snapshot();
+             let mut paint = Paint::default();
+             paint.set_alpha_f(opacity);
+
+             // Draw image filling the layout rect
+             canvas.draw_image_rect(&image, None, rect, &paint);
+        }
+
+        draw_children(canvas);
+    }
+
+    fn animate_property(&mut self, _property: &str, _start: f32, _target: f32, _duration: f64, _easing: &str) {
+        // No animatable properties on CompositionNode itself yet (e.g. opacity is handled by SceneNode blending)
+    }
+
+    fn get_audio(&self, time: f64, samples_needed: usize, _sample_rate: u32) -> Option<Vec<f32>> {
+        let comp_time = time - self.start_offset;
+        #[allow(unused_mut)]
+        let mut d = self.internal_director.lock().unwrap();
+        Some(d.mix_audio(samples_needed, comp_time))
     }
 }
