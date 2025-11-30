@@ -21,7 +21,7 @@ pub struct AudioTrack {
     pub loop_audio: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AudioMixer {
     pub tracks: Vec<Option<AudioTrack>>,
     pub sample_rate: u32,

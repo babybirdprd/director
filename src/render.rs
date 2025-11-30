@@ -200,7 +200,7 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
              }
         }
 
-        let audio_samples = director.audio_mixer.mix(samples_per_frame, frame_start_time);
+        let audio_samples = director.mix_audio(samples_per_frame, frame_start_time);
         encoder.encode_audio(&audio_samples, Time::from_secs_f64(frame_start_time))?;
     }
 
@@ -209,7 +209,7 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
     Ok(())
 }
 
-fn render_recursive(director: &Director, node_id: crate::director::NodeId, canvas: &skia_safe::Canvas, parent_opacity: f32) {
+pub fn render_recursive(director: &Director, node_id: crate::director::NodeId, canvas: &skia_safe::Canvas, parent_opacity: f32) {
     if let Some(node) = director.get_node(node_id) {
          canvas.save();
 

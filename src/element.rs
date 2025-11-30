@@ -85,7 +85,17 @@ pub struct TextSpan {
     pub fill_gradient: Option<GradientConfig>,
 }
 
-pub trait Element: std::fmt::Debug {
+pub trait ElementClone {
+    fn clone_box(&self) -> Box<dyn Element>;
+}
+
+impl<T> ElementClone for T where T: 'static + Element + Clone {
+    fn clone_box(&self) -> Box<dyn Element> {
+        Box::new(self.clone())
+    }
+}
+
+pub trait Element: std::fmt::Debug + ElementClone {
     // 1. Layout Phase
     fn layout_style(&self) -> Style;
 
@@ -114,7 +124,18 @@ pub trait Element: std::fmt::Debug {
         _easing: &str
     ) {
         // Default implementation: Warn user
-        // We can't access node ID easily here, but we can print "non-text node"
         eprintln!("Warning: add_animator called on a non-text node.");
+    }
+
+    // 7. Audio Interface (RFC 010)
+    // Returns interleaved stereo samples if this element produces audio.
+    fn get_audio(&self, _time: f64, _samples_needed: usize, _sample_rate: u32) -> Option<Vec<f32>> {
+        None
+    }
+}
+
+impl Clone for Box<dyn Element> {
+    fn clone(&self) -> Box<dyn Element> {
+        self.clone_box()
     }
 }

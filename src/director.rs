@@ -46,6 +46,7 @@ impl Transform {
 }
 
 /// A wrapper around an `Element` that adds scene graph relationships.
+#[derive(Clone)]
 pub struct SceneNode {
     /// The actual visual element (Box, Text, etc.)
     pub element: Box<dyn Element>,
@@ -117,6 +118,7 @@ pub struct Transition {
 }
 
 /// The central engine state.
+#[derive(Clone)]
 pub struct Director {
     /// The Arena of all nodes. Using `Option` allows for future removal/recycling.
     pub nodes: Vec<Option<SceneNode>>,
@@ -158,6 +160,53 @@ impl Director {
             asset_loader,
             audio_mixer: AudioMixer::new(48000),
         }
+    }
+
+    pub fn mix_audio(&mut self, samples_needed: usize, time: f64) -> Vec<f32> {
+        let mut output = self.audio_mixer.mix(samples_needed, time);
+
+        // Traverse active scenes
+        let mut active_roots = Vec::new();
+        for item in &self.timeline {
+             if time >= item.start_time && time < item.start_time + item.duration {
+                 let local_time = time - item.start_time;
+                 active_roots.push((item.scene_root, local_time));
+             }
+        }
+
+        let mut stack = Vec::new();
+        for (root, t) in active_roots {
+            stack.push((root, t));
+        }
+
+        while let Some((id, local_time)) = stack.pop() {
+             // We access nodes directly to avoid self borrow issues with get_node if we were using &mut self methods
+             // But here we need to read nodes.
+             if id < self.nodes.len() {
+                 if let Some(node) = &self.nodes[id] {
+                     // Check audio
+                     if let Some(samples) = node.element.get_audio(local_time, samples_needed, self.audio_mixer.sample_rate) {
+                         for (i, val) in samples.iter().enumerate() {
+                             if i < output.len() {
+                                 output[i] += val;
+                             }
+                         }
+                     }
+
+                     // Children
+                     for child_id in &node.children {
+                         stack.push((*child_id, local_time));
+                     }
+                 }
+             }
+        }
+
+        // Clamp
+        for s in output.iter_mut() {
+            *s = s.clamp(-1.0, 1.0);
+        }
+
+        output
     }
 
     pub fn add_global_audio(&mut self, samples: Vec<f32>) -> usize {
