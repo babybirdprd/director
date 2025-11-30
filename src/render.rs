@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::path::PathBuf;
+use std::process::Command;
 use crate::director::{Director, TimelineItem};
 use crate::layout::LayoutEngine;
 use skia_safe::{ColorType, AlphaType, ColorSpace};
@@ -15,7 +16,7 @@ pub type GpuContext = DirectContext;
 pub type GpuContext = ();
 
 #[allow(unused_variables)]
-pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Option<&mut GpuContext>) -> Result<()> {
+pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Option<&mut GpuContext>, audio_track_path: Option<PathBuf>) -> Result<()> {
     let width = director.width;
     let height = director.height;
     let fps = director.fps;
@@ -29,7 +30,14 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
 
     let total_frames = (max_duration * fps as f64).ceil() as usize;
 
-    let destination: Locator = out_path.into();
+    // If we have audio, render video to a temporary file first
+    let video_out_path = if audio_track_path.is_some() {
+        out_path.with_extension("temp.mp4")
+    } else {
+        out_path.clone()
+    };
+
+    let destination: Locator = video_out_path.clone().into();
     let settings = EncoderSettings::preset_h264_yuv420p(width as usize, height as usize, false);
 
     let mut encoder = Encoder::new(&destination, settings)?;
@@ -137,7 +145,7 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
                  if bytes.len() == width as usize * height as usize * 4 {
                     let vec_bytes = bytes.to_vec();
                     let frame = Array3::from_shape_vec(frame_shape, vec_bytes)?;
-                    encoder.encode(&frame, &Time::from_nth_of_second(i, fps))?;
+                    encoder.encode(&frame, Time::from_secs_f64(i as f64 / fps as f64))?;
                  }
              }
         } else {
@@ -152,12 +160,33 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
              if surface.read_pixels(&info, &mut bytes, (width * 4) as usize, (0, 0)) {
                  let frame_shape = (height as usize, width as usize, 4);
                  let frame = Array3::from_shape_vec(frame_shape, bytes)?;
-                 encoder.encode(&frame, &Time::from_nth_of_second(i, fps))?;
+                 encoder.encode(&frame, Time::from_secs_f64(i as f64 / fps as f64))?;
              }
         }
     }
 
     encoder.finish()?;
+
+    if let Some(audio_path) = audio_track_path {
+        println!("Muxing audio...");
+        let status = Command::new("ffmpeg")
+            .arg("-y")
+            .arg("-i").arg(&video_out_path)
+            .arg("-i").arg(&audio_path)
+            .arg("-c:v").arg("copy")
+            .arg("-c:a").arg("aac")
+            .arg("-shortest") // Stop when video ends
+            .arg(&out_path)
+            .status()?;
+
+        if !status.success() {
+            eprintln!("FFmpeg muxing failed");
+        } else {
+            // Clean up temp file
+            let _ = std::fs::remove_file(video_out_path);
+        }
+    }
+
     Ok(())
 }
 

@@ -1,13 +1,15 @@
 use director_engine::scripting::register_rhai_api;
 use rhai::Engine;
 use director_engine::render::render_export;
+use director_engine::DefaultAssetLoader;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn main() {
     println!("Initializing Director Engine...");
 
     let mut engine = Engine::new();
-    register_rhai_api(&mut engine);
+    register_rhai_api(&mut engine, Arc::new(DefaultAssetLoader));
 
     // Use ## as delimiter because script contains " (double quote) and # (hash)
     let script = r##"
@@ -42,7 +44,7 @@ fn main() {
         Ok(movie) => {
             println!("Script evaluated successfully. Starting render...");
             let mut director = movie.director.lock().unwrap();
-            match render_export(&mut director, PathBuf::from("output.mp4"), None) {
+            match render_export(&mut director, PathBuf::from("output.mp4"), None, None) {
                 Ok(_) => println!("Render complete: output.mp4"),
                 Err(e) => println!("Render failed: {}", e),
             }

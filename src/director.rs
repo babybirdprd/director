@@ -2,6 +2,8 @@ use crate::element::Element;
 // use rayon::prelude::*; // Rayon disabled due to Taffy !Send
 use skia_safe::{Path, PathMeasure};
 use crate::animation::Animated;
+use crate::AssetLoader;
+use std::sync::Arc;
 
 /// A unique identifier for a node in the scene graph.
 pub type NodeId = usize;
@@ -72,11 +74,13 @@ pub struct Director {
     pub samples_per_frame: u32,
     /// Shutter angle in degrees (0.0 to 360.0). Default: 180.0.
     pub shutter_angle: f32,
+    /// Asset loader for resolving file paths to bytes.
+    pub asset_loader: Arc<dyn AssetLoader>,
 }
 
 impl Director {
     /// Creates a new Director instance.
-    pub fn new(width: i32, height: i32, fps: u32) -> Self {
+    pub fn new(width: i32, height: i32, fps: u32, asset_loader: Arc<dyn AssetLoader>) -> Self {
         Self {
             nodes: Vec::new(),
             timeline: Vec::new(),
@@ -85,6 +89,7 @@ impl Director {
             fps,
             samples_per_frame: 1, // Default to no motion blur
             shutter_angle: 180.0,
+            asset_loader,
         }
     }
 

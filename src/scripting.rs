@@ -3,6 +3,7 @@ use crate::director::{Director, NodeId, TimelineItem, PathAnimationState};
 use crate::node::{BoxNode, TextNode, ImageNode, VideoNode};
 use crate::element::{Color, TextSpan};
 use crate::animation::{Animated, EasingType};
+use crate::AssetLoader;
 use std::sync::{Arc, Mutex};
 use cosmic_text::{FontSystem, SwashCache};
 use skia_safe::Path;
@@ -146,11 +147,12 @@ fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
     }
 }
 
-pub fn register_rhai_api(engine: &mut Engine) {
+pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
     // 1. Director/Movie
     engine.register_type_with_name::<MovieHandle>("Movie");
-    engine.register_fn("new_director", |w: i64, h: i64, fps: i64| {
-        let director = Director::new(w as i32, h as i32, fps as u32);
+    let loader_clone = loader.clone();
+    engine.register_fn("new_director", move |w: i64, h: i64, fps: i64| {
+        let director = Director::new(w as i32, h as i32, fps as u32, loader_clone.clone());
         MovieHandle { director: Arc::new(Mutex::new(director)) }
     });
 
@@ -225,16 +227,20 @@ pub fn register_rhai_api(engine: &mut Engine) {
     });
 
     engine.register_fn("add_image", |parent: &mut NodeHandle, path: &str| {
-         let img_node = ImageNode::new(path);
          let mut d = parent.director.lock().unwrap();
+         let bytes = d.asset_loader.load_bytes(path).unwrap_or(Vec::new());
+
+         let img_node = ImageNode::new(bytes);
          let id = d.add_node(Box::new(img_node));
          d.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
     engine.register_fn("add_video", |parent: &mut NodeHandle, path: &str| {
-         let vid_node = VideoNode::new(path);
          let mut d = parent.director.lock().unwrap();
+         let bytes = d.asset_loader.load_bytes(path).unwrap_or(Vec::new());
+
+         let vid_node = VideoNode::new(bytes);
          let id = d.add_node(Box::new(vid_node));
          d.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
