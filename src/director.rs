@@ -3,6 +3,7 @@ use crate::element::Element;
 use skia_safe::{Path, PathMeasure};
 use crate::animation::Animated;
 use crate::AssetLoader;
+use crate::audio::{AudioMixer, AudioTrack};
 use std::sync::Arc;
 
 /// A unique identifier for a node in the scene graph.
@@ -76,6 +77,8 @@ pub struct Director {
     pub shutter_angle: f32,
     /// Asset loader for resolving file paths to bytes.
     pub asset_loader: Arc<dyn AssetLoader>,
+    /// Audio Mixer state
+    pub audio_mixer: AudioMixer,
 }
 
 impl Director {
@@ -90,7 +93,30 @@ impl Director {
             samples_per_frame: 1, // Default to no motion blur
             shutter_angle: 180.0,
             asset_loader,
+            audio_mixer: AudioMixer::new(48000),
         }
+    }
+
+    pub fn add_global_audio(&mut self, samples: Vec<f32>) -> usize {
+        let track = AudioTrack {
+            samples,
+            volume: crate::animation::Animated::new(1.0),
+            start_time: 0.0,
+            duration: None,
+            loop_audio: false,
+        };
+        self.audio_mixer.add_track(track)
+    }
+
+    pub fn add_scene_audio(&mut self, samples: Vec<f32>, start_time: f64, duration: f64) -> usize {
+        let track = AudioTrack {
+            samples,
+            volume: crate::animation::Animated::new(1.0),
+            start_time,
+            duration: Some(duration),
+            loop_audio: false,
+        };
+        self.audio_mixer.add_track(track)
     }
 
     /// Adds a new element to the scene graph and returns its ID.

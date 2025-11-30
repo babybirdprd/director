@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::path::PathBuf;
-use std::process::Command;
 use crate::director::{Director, TimelineItem};
 use crate::layout::LayoutEngine;
+use crate::audio::load_audio_bytes;
 use skia_safe::{ColorType, AlphaType, ColorSpace};
 use crate::video_wrapper::{Encoder, EncoderSettings, Locator, Time};
 use ndarray::Array3;
@@ -30,14 +30,15 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
 
     let total_frames = (max_duration * fps as f64).ceil() as usize;
 
-    // If we have audio, render video to a temporary file first
-    let video_out_path = if audio_track_path.is_some() {
-        out_path.with_extension("temp.mp4")
-    } else {
-        out_path.clone()
-    };
+    if let Some(path) = audio_track_path {
+        if let Ok(bytes) = std::fs::read(path) {
+            if let Ok(samples) = load_audio_bytes(&bytes, director.audio_mixer.sample_rate) {
+                director.add_global_audio(samples);
+            }
+        }
+    }
 
-    let destination: Locator = video_out_path.clone().into();
+    let destination: Locator = out_path.clone().into();
     let settings = EncoderSettings::preset_h264_yuv420p(width as usize, height as usize, false);
 
     let mut encoder = Encoder::new(&destination, settings)?;
@@ -82,6 +83,8 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
     let shutter_angle = director.shutter_angle.clamp(0.0, 360.0);
     let frame_duration = 1.0 / fps as f64;
     let shutter_duration = frame_duration * (shutter_angle as f64 / 360.0);
+
+    let samples_per_frame = (director.audio_mixer.sample_rate as f64 / fps as f64).round() as usize;
 
     for i in 0..total_frames {
         let frame_start_time = i as f64 / fps as f64;
@@ -163,29 +166,12 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
                  encoder.encode(&frame, Time::from_secs_f64(i as f64 / fps as f64))?;
              }
         }
+
+        let audio_samples = director.audio_mixer.mix(samples_per_frame, frame_start_time);
+        encoder.encode_audio(&audio_samples, Time::from_secs_f64(frame_start_time))?;
     }
 
     encoder.finish()?;
-
-    if let Some(audio_path) = audio_track_path {
-        println!("Muxing audio...");
-        let status = Command::new("ffmpeg")
-            .arg("-y")
-            .arg("-i").arg(&video_out_path)
-            .arg("-i").arg(&audio_path)
-            .arg("-c:v").arg("copy")
-            .arg("-c:a").arg("aac")
-            .arg("-shortest") // Stop when video ends
-            .arg(&out_path)
-            .status()?;
-
-        if !status.success() {
-            eprintln!("FFmpeg muxing failed");
-        } else {
-            // Clean up temp file
-            let _ = std::fs::remove_file(video_out_path);
-        }
-    }
 
     Ok(())
 }

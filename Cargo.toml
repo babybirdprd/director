@@ -17,6 +17,7 @@ rhai = "1.23.6"
 anyhow = "1.0.100"
 thiserror = "2.0.17"
 image = "0.25.9"
+symphonia = { version = "0.5.3", features = ["aac", "mp3", "pcm", "wav", "isomp4"] }
 
 # Optional dependencies
 video-rs = { version = "0.10.5", optional = true, features = ["ndarray"] }
