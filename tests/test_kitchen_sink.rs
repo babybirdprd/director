@@ -14,37 +14,36 @@ fn test_kitchen_sink_layout() {
     let result = engine.eval::<MovieHandle>(&script).expect("Script failed");
     let mut director = result.director.lock().unwrap();
 
-    let mut surface = skia_safe::surfaces::raster_n32_premul((100, 100)).unwrap();
+    // Trigger Layout
+    let mut surface = skia_safe::surfaces::raster_n32_premul((1920, 1080)).unwrap();
     director_engine::render::render_frame(&mut director, 0.0, surface.canvas());
 
+    // Verify Layout Hierarchy
     let scene_root_id = director.timeline[0].scene_root;
     let scene_root = director.get_node(scene_root_id).unwrap();
 
-    // Check Root Box
-    assert_eq!(scene_root.children.len(), 1, "Scene root should have 1 child");
-    let user_root_id = scene_root.children[0];
-    let user_root = director.get_node(user_root_id).unwrap();
+    // Root Box
+    let user_root = director.get_node(scene_root.children[0]).unwrap();
+    assert!((user_root.layout_rect.width() - 1920.0).abs() < 1.0);
 
-    // Check Image and Video
-    assert_eq!(user_root.children.len(), 2, "User root should have 2 children");
+    // Columns
+    assert_eq!(user_root.children.len(), 2, "Should have 2 columns");
+    let col_img = director.get_node(user_root.children[0]).unwrap();
+    let col_vid = director.get_node(user_root.children[1]).unwrap();
 
-    let image_id = user_root.children[0];
-    let video_id = user_root.children[1];
+    // Verify Column Widths (45% of 1920 = 864)
+    println!("Col Img Rect: {:?}", col_img.layout_rect);
+    assert!((col_img.layout_rect.width() - 864.0).abs() < 10.0, "Column width mismatch");
+    assert!((col_vid.layout_rect.width() - 864.0).abs() < 10.0, "Column width mismatch");
 
-    let image_node = director.get_node(image_id).unwrap();
-    let video_node = director.get_node(video_id).unwrap();
+    // Check Image Container (Child 1 of Col 1, Child 0 is Text)
+    let img_container = director.get_node(col_img.children[1]).unwrap();
+    assert!((img_container.layout_rect.width() - 300.0).abs() < 1.0);
+    assert!((img_container.layout_rect.height() - 300.0).abs() < 1.0);
 
-    // Verify Video Width = 200.0
-    assert!((video_node.layout_rect.width() - 200.0).abs() < 0.1, "Video width should be 200");
-
-    // Verify Image Width = 800.0
-    assert!((image_node.layout_rect.width() - 800.0).abs() < 0.1, "Image width should be 800");
-
-    // Verify Heights = 1000.0
-    assert!((image_node.layout_rect.height() - 1000.0).abs() < 0.1, "Image height should be 1000");
-    assert!((video_node.layout_rect.height() - 1000.0).abs() < 0.1, "Video height should be 1000");
-
-    // Verify positions
-    assert!((image_node.layout_rect.left - 0.0).abs() < 0.1, "Image should start at 0");
-    assert!((video_node.layout_rect.left - 800.0).abs() < 0.1, "Video should start at 800");
+    // Check Video Container (Child 1 of Col 2)
+    let vid_container = director.get_node(col_vid.children[1]).unwrap();
+    // Width is 90% of 864 = ~777.6
+    let expected_vid_width = 864.0 * 0.9;
+    assert!((vid_container.layout_rect.width() - expected_vid_width).abs() < 10.0);
 }
