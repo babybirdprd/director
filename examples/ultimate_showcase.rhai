@@ -1,17 +1,17 @@
 // RFC 015: The "Ultimate Showcase" Validation
-// Target: 720p @ 30fps (Backup Plan)
+// Target: 480p @ 30fps (Second Backup Plan)
 
 print("🎬 Initializing Ultimate Showcase...");
 
-let width = 1280;
-let height = 720;
+let width = 854;
+let height = 480;
 let fps = 30;
 
 // Configure for Export Mode
 let movie = new_director(width, height, fps, #{ mode: "export" });
 
-// Enable Motion Blur for production polish
-movie.configure_motion_blur(8, 180.0);
+// Enable Motion Blur for production polish (Reduced samples for performance)
+movie.configure_motion_blur(4, 180.0);
 
 // Load Assets
 let font_inter = "assets/Inter-Bold.ttf";
