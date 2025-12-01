@@ -1,51 +1,17 @@
-use director_engine::{scripting::{register_rhai_api, MovieHandle}, AssetLoader};
+use director_engine::{scripting::{register_rhai_api, MovieHandle}, DefaultAssetLoader};
 use rhai::Engine;
 use std::sync::Arc;
-use anyhow::Result;
-
-struct MockLoader;
-impl AssetLoader for MockLoader {
-    fn load_bytes(&self, _path: &str) -> Result<Vec<u8>> {
-        Ok(vec![0; 10])
-    }
-}
+use std::fs;
 
 #[test]
 fn test_kitchen_sink_layout() {
     let mut engine = Engine::new();
-    let loader = Arc::new(MockLoader);
+    let loader = Arc::new(DefaultAssetLoader);
     register_rhai_api(&mut engine, loader);
 
-    let script = r#"
-       let movie = new_director(1000, 1000, 30);
-       let scene = movie.add_scene(5.0);
+    let script = fs::read_to_string("tests/kitchen_sink.rhai").expect("Failed to read script");
 
-       // Create a container filling the screen
-       let root = scene.add_box(#{
-           width: "100%",
-           height: "100%",
-           flex_grow: 1.0,
-           flex_direction: "row",
-           align_items: "stretch"
-       });
-
-       // Image with flex grow 1
-       // Should take (1000 - 200) = 800px width
-       root.add_image("test.jpg", #{
-           flex_grow: 1.0,
-           height: "auto"
-       });
-
-       // Video with fixed width
-       root.add_video("test.mp4", #{
-           width: 200,
-           height: "100%"
-       });
-
-       movie
-    "#;
-
-    let result = engine.eval::<MovieHandle>(script).expect("Script failed");
+    let result = engine.eval::<MovieHandle>(&script).expect("Script failed");
     let mut director = result.director.lock().unwrap();
 
     let mut surface = skia_safe::surfaces::raster_n32_premul((100, 100)).unwrap();
