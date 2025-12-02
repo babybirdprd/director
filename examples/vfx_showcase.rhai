@@ -5,6 +5,7 @@ let scene = movie.add_scene(4.0);
 // Background
 scene.add_box(#{
     width: "100%", height: "100%",
+    flex_direction: "column",
     bg_color: "#222222"
 });
 

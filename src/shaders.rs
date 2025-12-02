@@ -68,7 +68,7 @@ pub const HALFTONE: &str = r#"
 
         float2 center = floor(p / dotSize) * dotSize + dotSize * 0.5;
         float dist = distance(p, center);
-        float radius = (dotSize * 0.5) * gray;
+        float radius = (dotSize * 0.5) * (1.0 - gray);
 
         if (dist < radius) {
             return half4(0.0, 0.0, 0.0, color.a); // Black dots
