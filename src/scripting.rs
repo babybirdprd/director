@@ -1,6 +1,6 @@
 use rhai::{Engine, Map, Module};
 use crate::director::{Director, NodeId, TimelineItem, PathAnimationState, Transition, TransitionType};
-use crate::node::{BoxNode, TextNode, ImageNode, VideoNode, CompositionNode, EffectType, EffectNode, VectorNode};
+use crate::node::{BoxNode, TextNode, ImageNode, VideoNode, CompositionNode, EffectType, EffectNode, VectorNode, LottieNode};
 use crate::video_wrapper::RenderMode;
 use crate::element::{Element, Color, TextSpan, GradientConfig, TextFit, TextShadow};
 use crate::animation::{Animated, EasingType};
@@ -659,6 +659,50 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let id = d.add_node(Box::new(img_node));
          d.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
+    });
+
+    engine.register_fn("add_lottie", |parent: &mut NodeHandle, path: &str| {
+         let mut d = parent.director.lock().unwrap();
+         let bytes = d.asset_loader.load_bytes(path).unwrap_or(Vec::new());
+
+         match LottieNode::new(&bytes) {
+             Ok(lottie_node) => {
+                 let id = d.add_node(Box::new(lottie_node));
+                 d.add_child(parent.id, id);
+                 NodeHandle { director: parent.director.clone(), id }
+             }
+             Err(e) => {
+                 eprintln!("Failed to load lottie: {}", e);
+                 let id = d.add_node(Box::new(BoxNode::new()));
+                 NodeHandle { director: parent.director.clone(), id }
+             }
+         }
+    });
+
+    engine.register_fn("add_lottie", |parent: &mut NodeHandle, path: &str, props: rhai::Map| {
+         let mut d = parent.director.lock().unwrap();
+         let bytes = d.asset_loader.load_bytes(path).unwrap_or(Vec::new());
+
+         match LottieNode::new(&bytes) {
+             Ok(mut lottie_node) => {
+                 parse_layout_style(&props, &mut lottie_node.style);
+                 if let Some(v) = props.get("speed").and_then(|v| v.as_float().ok()) {
+                     lottie_node.speed = v as f32;
+                 }
+                 if let Some(v) = props.get("loop").and_then(|v| v.as_bool().ok()) {
+                     lottie_node.loop_anim = v;
+                 }
+
+                 let id = d.add_node(Box::new(lottie_node));
+                 d.add_child(parent.id, id);
+                 NodeHandle { director: parent.director.clone(), id }
+             }
+             Err(e) => {
+                 eprintln!("Failed to load lottie: {}", e);
+                 let id = d.add_node(Box::new(BoxNode::new()));
+                 NodeHandle { director: parent.director.clone(), id }
+             }
+         }
     });
 
     engine.register_fn("add_svg", |scene: &mut SceneHandle, path: &str| {

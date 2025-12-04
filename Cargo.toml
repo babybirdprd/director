@@ -18,6 +18,13 @@ anyhow = "1.0.100"
 thiserror = "2.0.17"
 image = "0.25.9"
 symphonia = { version = "0.5.3", features = ["aac", "mp3", "pcm", "wav", "isomp4"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Lottie Dependencies
+lottie-core = { git = "https://github.com/babybirdprd/rust-lottie-skia" }
+lottie-data = { git = "https://github.com/babybirdprd/rust-lottie-skia" }
+lottie-skia = { git = "https://github.com/babybirdprd/rust-lottie-skia" }
 
 # Optional dependencies
 video-rs = { version = "0.10.5", optional = true, features = ["ndarray"] }
