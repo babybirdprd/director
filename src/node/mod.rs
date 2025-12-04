@@ -1336,3 +1336,6 @@ impl Element for CompositionNode {
 }
 pub mod vector;
 pub use vector::VectorNode;
+
+pub mod lottie;
+pub use lottie::LottieNode;

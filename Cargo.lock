@@ -114,7 +114,7 @@ dependencies = [
  "num-traits",
  "pastey",
  "rayon",
- "thiserror",
+ "thiserror 2.0.17",
  "v_frame",
  "y4m",
 ]
@@ -421,16 +421,21 @@ dependencies = [
  "crossbeam-channel",
  "image",
  "keyframe",
+ "lottie-core",
+ "lottie-data",
+ "lottie-skia",
  "ndarray",
  "rand 0.8.5",
  "rayon",
  "resvg",
  "rhai",
+ "serde",
+ "serde_json",
  "skia-safe",
  "symphonia",
  "taffy",
  "tempfile",
- "thiserror",
+ "thiserror 2.0.17",
  "tiny-skia",
  "unicode-segmentation",
  "usvg",
@@ -722,6 +727,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.24.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5418c17512bdf42730f9032c74e1ae39afc408745ebb2acf72fbc4691c17945"
+
+[[package]]
 name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1009,6 +1020,15 @@ dependencies = [
 
 [[package]]
 name = "kurbo"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd85a5776cd9500c2e2059c8c76c3b01528566b7fcbaf8098b55a33fc298849b"
+dependencies = [
+ "arrayvec",
+]
+
+[[package]]
+name = "kurbo"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c62026ae44756f8a599ba21140f350303d4f08dcdcc71b5ad9c9bb8128c13c62"
@@ -1104,6 +1124,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fae87c125b03c1d2c0150c90365d7d6bcc53fb73a9acaef207d2d065860f062"
 dependencies = [
  "imgref",
+]
+
+[[package]]
+name = "lottie-core"
+version = "0.1.0"
+source = "git+https://github.com/babybirdprd/rust-lottie-skia#943162913a8ef6133ae4942b06e28b87289f4d4a"
+dependencies = [
+ "base64",
+ "glam",
+ "kurbo 0.9.5",
+ "lottie-data",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "lottie-data"
+version = "0.1.0"
+source = "git+https://github.com/babybirdprd/rust-lottie-skia#943162913a8ef6133ae4942b06e28b87289f4d4a"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lottie-skia"
+version = "0.1.0"
+source = "git+https://github.com/babybirdprd/rust-lottie-skia#943162913a8ef6133ae4942b06e28b87289f4d4a"
+dependencies = [
+ "glam",
+ "kurbo 0.9.5",
+ "lottie-core",
+ "skia-safe",
 ]
 
 [[package]]
@@ -1565,7 +1619,7 @@ dependencies = [
  "rand 0.9.2",
  "rand_chacha 0.9.0",
  "simd_helpers",
- "thiserror",
+ "thiserror 2.0.17",
  "v_frame",
  "wasm-bindgen",
 ]
@@ -1965,7 +2019,7 @@ version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68c7541fff44b35860c1a7a47a7cadf3e4a304c457b58f9870d9706ece028afc"
 dependencies = [
- "kurbo",
+ "kurbo 0.11.3",
  "siphasher",
 ]
 
@@ -2227,11 +2281,31 @@ checksum = "144f754d318415ac792f9d69fc87abbbfc043ce2ef041c60f16ad828f638717d"
 
 [[package]]
 name = "thiserror"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
+dependencies = [
+ "thiserror-impl 1.0.69",
+]
+
+[[package]]
+name = "thiserror"
 version = "2.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f63587ca0f12b72a0600bcba1d40081f830876000bb46dd2337a3051618f4fc8"
 dependencies = [
- "thiserror-impl",
+ "thiserror-impl 2.0.17",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.69"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2484,7 +2558,7 @@ dependencies = [
  "flate2",
  "fontdb 0.22.0",
  "imagesize",
- "kurbo",
+ "kurbo 0.11.3",
  "log",
  "pico-args",
  "roxmltree",
