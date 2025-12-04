@@ -1129,7 +1129,7 @@ dependencies = [
 [[package]]
 name = "lottie-core"
 version = "0.1.0"
-source = "git+https://github.com/babybirdprd/rust-lottie-skia#235d2b91061f62e27e87465d6ae6f9f0eb561723"
+source = "git+https://github.com/babybirdprd/rust-lottie-skia#943162913a8ef6133ae4942b06e28b87289f4d4a"
 dependencies = [
  "base64",
  "glam",
@@ -1143,7 +1143,7 @@ dependencies = [
 [[package]]
 name = "lottie-data"
 version = "0.1.0"
-source = "git+https://github.com/babybirdprd/rust-lottie-skia#235d2b91061f62e27e87465d6ae6f9f0eb561723"
+source = "git+https://github.com/babybirdprd/rust-lottie-skia#943162913a8ef6133ae4942b06e28b87289f4d4a"
 dependencies = [
  "serde",
  "serde_json",
@@ -1152,7 +1152,7 @@ dependencies = [
 [[package]]
 name = "lottie-skia"
 version = "0.1.0"
-source = "git+https://github.com/babybirdprd/rust-lottie-skia#235d2b91061f62e27e87465d6ae6f9f0eb561723"
+source = "git+https://github.com/babybirdprd/rust-lottie-skia#943162913a8ef6133ae4942b06e28b87289f4d4a"
 dependencies = [
  "glam",
  "kurbo 0.9.5",
