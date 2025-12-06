@@ -79,6 +79,8 @@ pub struct SceneNode {
     // Masking & Compositing
     pub mask_node: Option<NodeId>,
     pub blend_mode: skia_safe::BlendMode,
+
+    pub dirty_style: bool,
 }
 
 impl SceneNode {
@@ -94,6 +96,7 @@ impl SceneNode {
             transform: Transform::new(),
             mask_node: None,
             blend_mode: skia_safe::BlendMode::SrcOver,
+            dirty_style: true,
         }
     }
 }
@@ -382,7 +385,9 @@ impl Director {
         for node_opt in self.nodes.iter_mut() {
             if let Some(node) = node_opt {
                 if (node.last_visit_time - global_time).abs() < 0.0001 {
-                    node.element.update(node.local_time);
+                    if node.element.update(node.local_time) {
+                        node.dirty_style = true;
+                    }
 
                     // Update Transform Animations
                     node.transform.scale_x.update(node.local_time);

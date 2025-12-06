@@ -1015,6 +1015,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
              let mut layout_style = n.element.layout_style();
              parse_layout_style(&style, &mut layout_style);
              n.element.set_layout_style(layout_style);
+             n.dirty_style = true;
 
              n.element.modify_text_spans(&|spans| {
                  for span in spans {
