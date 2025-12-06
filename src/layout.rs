@@ -3,7 +3,7 @@ use crate::director::{Director, NodeId};
 
 pub struct LayoutEngine {
     taffy: TaffyTree,
-    // Temporary map for the current frame calculation
+    // Persistent map for mapping Director NodeId -> Taffy NodeId
     node_map: std::collections::HashMap<NodeId, taffy::NodeId>,
 }
 
@@ -16,10 +16,60 @@ impl LayoutEngine {
     }
 
     pub fn compute_layout(&mut self, director: &mut Director, time: f64) {
-        // 1. Rebuild Taffy Tree from Director Scene Graph
-        self.taffy = TaffyTree::new();
-        self.node_map.clear();
+        // 1. Sync Phase A: Ensure Nodes Exist & Update Styles
+        // Iterate over all potential node IDs in the Director
+        for (id, node_opt) in director.nodes.iter_mut().enumerate() {
+            if let Some(node) = node_opt {
+                // Ensure existence in Taffy
+                let t_id = if let Some(&existing_t_id) = self.node_map.get(&id) {
+                    existing_t_id
+                } else {
+                    let style = node.element.layout_style();
+                    let new_t_id = self.taffy.new_leaf(style).unwrap();
+                    self.node_map.insert(id, new_t_id);
+                    new_t_id
+                };
 
+                // Sync Style if dirty
+                if node.dirty_style {
+                    let style = node.element.layout_style();
+                    self.taffy.set_style(t_id, style).unwrap();
+                    node.dirty_style = false;
+                }
+            } else {
+                // Node is deleted in Director
+                if let Some(t_id) = self.node_map.remove(&id) {
+                    self.taffy.remove(t_id).ok();
+                }
+            }
+        }
+
+        // 2. Sync Phase B: Update Relationships (Children)
+        // We iterate again. Since we updated all nodes in Phase A, all valid children should be in node_map.
+        for (id, node_opt) in director.nodes.iter().enumerate() {
+             if let Some(node) = node_opt {
+                 if let Some(&t_id) = self.node_map.get(&id) {
+                     let mut children_t_ids = Vec::with_capacity(node.children.len() + 1);
+
+                     for &child_id in &node.children {
+                         if let Some(&child_t_id) = self.node_map.get(&child_id) {
+                             children_t_ids.push(child_t_id);
+                         }
+                     }
+                     if let Some(mask_id) = node.mask_node {
+                         if let Some(&mask_t_id) = self.node_map.get(&mask_id) {
+                             children_t_ids.push(mask_t_id);
+                         }
+                     }
+
+                     // Always set children to ensure structure is correct
+                     // Taffy's set_children is optimized to do nothing if children list hasn't changed.
+                     self.taffy.set_children(t_id, &children_t_ids).unwrap();
+                 }
+             }
+        }
+
+        // 3. Compute Layout for Active Roots
         // Iterate timeline to find active roots
         let mut active_roots = Vec::new();
         for item in &director.timeline {
@@ -31,50 +81,20 @@ impl LayoutEngine {
         for root_id in active_roots {
             // Need to handle missing node safely
             if director.get_node(root_id).is_some() {
-                // Build tree for this scene
-                let taffy_root = self.build_recursive(director, root_id);
+                 if let Some(&root_t_id) = self.node_map.get(&root_id) {
+                    self.taffy.compute_layout(
+                        root_t_id,
+                        Size {
+                            width: AvailableSpace::Definite(director.width as f32),
+                            height: AvailableSpace::Definite(director.height as f32),
+                        },
+                    ).unwrap();
 
-                // 2. Compute Layout
-                // The root node of a scene fills the screen by default?
-                // Or we respect its style?
-                // Existing code forced root size.
-                // Let's force it for consistency.
-
-                // Note: We can't easily modify the style inside `director` from here without mutable borrow,
-                // but `build_recursive` reads style.
-                // Taffy allows overriding root size in `compute_layout`.
-                // We pass Definite size which acts as constraints.
-
-                self.taffy.compute_layout(
-                    taffy_root,
-                    Size {
-                        width: AvailableSpace::Definite(director.width as f32),
-                        height: AvailableSpace::Definite(director.height as f32),
-                    },
-                ).unwrap();
-
-                // 3. Write back results to Director Nodes
-                self.write_back_recursive(director, root_id);
+                    // 4. Write back results to Director Nodes
+                    self.write_back_recursive(director, root_id);
+                 }
             }
         }
-    }
-
-    fn build_recursive(&mut self, director: &Director, node_id: NodeId) -> taffy::NodeId {
-        let node = director.get_node(node_id).unwrap();
-        let style = node.element.layout_style();
-
-        let mut children_ids = Vec::new();
-        for &child_id in &node.children {
-            children_ids.push(self.build_recursive(director, child_id));
-        }
-        // Include mask_node in layout
-        if let Some(mask_id) = node.mask_node {
-            children_ids.push(self.build_recursive(director, mask_id));
-        }
-
-        let t_id = self.taffy.new_with_children(style, &children_ids).unwrap();
-        self.node_map.insert(node_id, t_id);
-        t_id
     }
 
     fn write_back_recursive(&self, director: &mut Director, node_id: NodeId) {
