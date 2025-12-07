@@ -1,9 +1,9 @@
 use rhai::{Engine, Map, Module};
 use crate::director::{Director, NodeId, TimelineItem, PathAnimationState, Transition, TransitionType};
-use crate::node::{BoxNode, TextNode, ImageNode, VideoNode, CompositionNode, EffectType, EffectNode, VectorNode, LottieNode, VideoSource};
+use crate::node::{BoxNode, TextNode, ImageNode, VideoNode, CompositionNode, EffectType, EffectNode, VectorNode, LottieNode, VideoSource, ShaderUniform};
 use crate::video_wrapper::RenderMode;
 use crate::element::{Element, Color, TextSpan, GradientConfig, TextFit, TextShadow};
-use crate::animation::{Animated, EasingType};
+use crate::animation::{Animated, EasingType, TweenableVector};
 use crate::tokens::DesignSystem;
 use crate::AssetLoader;
 use std::sync::{Arc, Mutex};
@@ -99,6 +99,7 @@ fn apply_effect_to_node(d: &mut Director, node_id: NodeId, effect: EffectType) -
         effects: vec![effect],
         style: wrapper_style,
         shader_cache: d.shader_cache.clone(),
+        current_time: 0.0,
     };
 
     let effect_id = d.add_node(Box::new(effect_node));
@@ -1162,6 +1163,41 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
         }
     });
 
+    // New animate for Vectors
+    engine.register_fn("animate", |node: &mut NodeHandle, prop: &str, start: Vec<rhai::Dynamic>, end: Vec<rhai::Dynamic>, dur: f64, ease: &str| {
+        let mut d = node.director.lock().unwrap();
+        if let Some(n) = d.get_node_mut(node.id) {
+             let ease_fn = match ease {
+                 "linear" => EasingType::Linear,
+                 "ease_in" => EasingType::EaseIn,
+                 "ease_out" => EasingType::EaseOut,
+                 "ease_in_out" => EasingType::EaseInOut,
+                 "bounce_out" => EasingType::BounceOut,
+                 _ => EasingType::Linear,
+             };
+
+             // Helper to convert dynamic vec to f32 vec
+             let to_f32_vec = |v: Vec<rhai::Dynamic>| -> Vec<f32> {
+                 v.into_iter().filter_map(|x| x.as_float().ok().map(|f| f as f32)).collect()
+             };
+
+             let start_vec = to_f32_vec(start);
+             let end_vec = to_f32_vec(end);
+
+             if let Some(effect_node) = n.element.as_any_mut().downcast_mut::<EffectNode>() {
+                  for effect in &mut effect_node.effects {
+                      if let EffectType::RuntimeShader { uniforms, .. } = effect {
+                          if let Some(anim) = uniforms.get_mut(prop) {
+                              if let ShaderUniform::Vec(a) = anim {
+                                  a.add_segment(TweenableVector(start_vec.clone()), TweenableVector(end_vec.clone()), dur, ease_fn);
+                              }
+                          }
+                      }
+                  }
+             }
+        }
+    });
+
     engine.register_fn("animate", |node: &mut NodeHandle, prop: &str, end: f64, config: rhai::Map| {
         let mut d = node.director.lock().unwrap();
         let spring_conf = parse_spring_config(&config);
@@ -1364,7 +1400,18 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                  if let Some(u_map) = map.get("uniforms").and_then(|v| v.clone().try_cast::<Map>()) {
                      for (k, v) in u_map {
                          if let Ok(f) = v.as_float() {
-                             uniforms.insert(k.to_string(), Animated::new(f as f32));
+                             uniforms.insert(k.to_string(), ShaderUniform::Float(Animated::new(f as f32)));
+                         } else if let Ok(arr) = v.clone().into_array() {
+                             // Handle array -> Vec<f32>
+                             let mut vec_data = Vec::new();
+                             for item in arr {
+                                 if let Ok(f) = item.as_float() {
+                                     vec_data.push(f as f32);
+                                 }
+                             }
+                             if !vec_data.is_empty() {
+                                 uniforms.insert(k.to_string(), ShaderUniform::Vec(Animated::new(TweenableVector(vec_data))));
+                             }
                          }
                      }
                  }
