@@ -670,7 +670,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let mut d = parent.director.lock().unwrap();
          let bytes = d.asset_loader.load_bytes(path).unwrap_or(Vec::new());
 
-         match LottieNode::new(&bytes, HashMap::new()) {
+         match LottieNode::new(&bytes, HashMap::new(), d.asset_loader.clone()) {
              Ok(lottie_node) => {
                  let id = d.add_node(Box::new(lottie_node));
                  d.add_child(parent.id, id);
@@ -701,7 +701,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
              }
          }
 
-         match LottieNode::new(&bytes, assets_map) {
+         match LottieNode::new(&bytes, assets_map, d.asset_loader.clone()) {
              Ok(mut lottie_node) => {
                  parse_layout_style(&props, &mut lottie_node.style);
                  if let Some(v) = props.get("speed").and_then(|v| v.as_float().ok()) {

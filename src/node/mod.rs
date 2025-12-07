@@ -11,6 +11,7 @@ use crate::director::Director;
 use crate::layout::LayoutEngine;
 use crate::render::render_recursive;
 use cosmic_text::{Buffer, FontSystem, Metrics, SwashCache, Attrs, AttrsList, Shaping, Weight, Style as CosmicStyle, Family};
+use cosmic_text::fontdb::{Source as FontSource, ID as FontID};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::any::Any;
@@ -641,10 +642,36 @@ impl Element for TextNode {
                 buffer.shape_until_scroll(&mut fs, false);
             }
 
-            let font_mgr = FontMgr::default();
-            // Default font setup (fallback)
-            let typeface = font_mgr.match_family_style("Sans Serif", FontStyle::normal()).unwrap();
-            let font = skia_safe::Font::new(typeface, Some(self.default_font_size.current_value));
+            // Typeface Cache
+            let mut typeface_cache: HashMap<FontID, skia_safe::Typeface> = HashMap::new();
+
+            // Helper to get typeface (closure to capture fs and typeface_cache)
+            let mut get_typeface = |font_id: FontID| -> skia_safe::Typeface {
+                if !typeface_cache.contains_key(&font_id) {
+                     if let Some(face) = fs.db().face(font_id) {
+                         match &face.source {
+                             FontSource::Binary(data) => {
+                                 let sk_data = Data::new_copy(data.as_ref().as_ref());
+                                 if let Some(tf) = FontMgr::default().new_from_data(&sk_data, None) {
+                                     typeface_cache.insert(font_id, tf);
+                                 }
+                             },
+                             FontSource::File(path) => {
+                                 if let Ok(bytes) = std::fs::read(path) {
+                                      let sk_data = Data::new_copy(&bytes);
+                                      if let Some(tf) = FontMgr::default().new_from_data(&sk_data, None) {
+                                         typeface_cache.insert(font_id, tf);
+                                      }
+                                 }
+                             },
+                             _ => {}
+                         }
+                     }
+                 }
+                 typeface_cache.get(&font_id).cloned().unwrap_or_else(|| {
+                     FontMgr::default().match_family_style("Sans Serif", FontStyle::normal()).unwrap()
+                 })
+            };
 
             let ranges = self.build_span_ranges();
 
@@ -703,16 +730,8 @@ impl Element for TextNode {
                          let span = &self.spans[span_idx];
 
                          let size = span.font_size.unwrap_or(self.default_font_size.current_value);
-                         let mut typeface = font.typeface();
-                         if span.font_weight.is_some() || span.font_style.is_some() || span.font_family.is_some() {
-                             let mgr = FontMgr::default();
-                             let family = span.font_family.as_deref().unwrap_or("Sans Serif");
-                             let weight = span.font_weight.map(|w| SkWeight::from(w as i32)).unwrap_or(SkWeight::NORMAL);
-                             let slant = if span.font_style.as_deref() == Some("italic") { SkSlant::Italic } else { SkSlant::Upright };
-                             if let Some(tf) = mgr.match_family_style(family, FontStyle::new(weight, SkWidth::NORMAL, slant)) {
-                                 typeface = tf;
-                             }
-                         }
+
+                         let typeface = get_typeface(glyph.font_id);
                          let glyph_font = skia_safe::Font::new(typeface, Some(size));
 
                          let mut builder = TextBlobBuilder::new();
@@ -831,21 +850,9 @@ impl Element for TextNode {
 
                      // 4. Resolve Style
                      let size = span.font_size.unwrap_or(self.default_font_size.current_value);
-                     let mut typeface = font.typeface();
 
-                     if span.font_weight.is_some() || span.font_style.is_some() || span.font_family.is_some() {
-                         let mgr = FontMgr::default();
-                         let family = span.font_family.as_deref().unwrap_or("Sans Serif");
-                         let weight = span.font_weight.map(|w| SkWeight::from(w as i32)).unwrap_or(SkWeight::NORMAL);
-                         let slant = if span.font_style.as_deref() == Some("italic") {
-                             SkSlant::Italic
-                         } else {
-                             SkSlant::Upright
-                         };
-                         if let Some(tf) = mgr.match_family_style(family, FontStyle::new(weight, SkWidth::NORMAL, slant)) {
-                             typeface = tf;
-                         }
-                     }
+                     // Resolve Typeface from cosmic-text font_id
+                     let typeface = get_typeface(glyph.font_id);
                      let glyph_font = skia_safe::Font::new(typeface, Some(size));
 
                      // 5. Create Blob using TextBlobBuilder (Preserve Ligatures)

@@ -1,5 +1,5 @@
 use crate::element::Element;
-use skia_safe::{Canvas, Rect, Image, Paint, SamplingOptions, surfaces, ImageInfo, ColorType, AlphaType, Color};
+use skia_safe::{Canvas, Rect, Image, Paint, SamplingOptions, surfaces, ImageInfo, ColorType, AlphaType, Color, Data, Typeface};
 use taffy::style::Style;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
@@ -8,9 +8,11 @@ use lottie_core::{LottiePlayer, LottieAsset};
 use lottie_data::model::LottieJson;
 use lottie_skia::{SkiaRenderer, LottieContext};
 use crate::animation::{Animated, EasingType};
+use crate::AssetLoader;
 
 pub struct LottieAssetManager {
     pub images: HashMap<String, Image>,
+    pub asset_loader: Arc<dyn AssetLoader>,
 }
 
 impl std::fmt::Debug for LottieAssetManager {
@@ -22,7 +24,27 @@ impl std::fmt::Debug for LottieAssetManager {
 }
 
 impl LottieContext for LottieAssetManager {
-    fn load_typeface(&self, _family: &str, _style: &str) -> Option<skia_safe::Typeface> {
+    fn load_typeface(&self, family: &str, _style: &str) -> Option<Typeface> {
+        // Try exact name
+        let names = vec![
+            family.to_string(),
+            format!("{}.ttf", family),
+            format!("{}.otf", family),
+            format!("assets/{}", family),
+            format!("assets/{}.ttf", family),
+            format!("assets/{}.otf", family),
+            format!("assets/fonts/{}.ttf", family),
+            format!("assets/fonts/{}.otf", family),
+        ];
+
+        for name in names {
+            if let Ok(bytes) = self.asset_loader.load_bytes(&name) {
+                let data = Data::new_copy(&bytes);
+                if let Some(tf) = skia_safe::FontMgr::default().new_from_data(&data, None) {
+                    return Some(tf);
+                }
+            }
+        }
         None
     }
 
@@ -79,7 +101,7 @@ impl Clone for LottieNode {
 }
 
 impl LottieNode {
-    pub fn new(data: &[u8], assets: HashMap<String, Image>) -> anyhow::Result<Self> {
+    pub fn new(data: &[u8], assets: HashMap<String, Image>, asset_loader: Arc<dyn AssetLoader>) -> anyhow::Result<Self> {
         let json_str = std::str::from_utf8(data)?;
         let model: LottieJson = serde_json::from_str(json_str)?;
 
@@ -95,7 +117,7 @@ impl LottieNode {
             frame: Animated::new(0.0),
             speed: 1.0,
             loop_anim: false,
-            asset_manager: Arc::new(LottieAssetManager { images: assets }),
+            asset_manager: Arc::new(LottieAssetManager { images: assets, asset_loader }),
             cache: Mutex::new(None),
         })
     }
