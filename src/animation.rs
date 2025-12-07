@@ -1,4 +1,4 @@
-use keyframe::{Keyframe, EasingFunction, AnimationSequence};
+use keyframe::{Keyframe, EasingFunction, AnimationSequence, CanTween};
 use std::fmt;
 
 // Define our own enum to store easing types uniformly
@@ -46,9 +46,34 @@ impl Default for SpringConfig {
     }
 }
 
+// Wrapper for Vec<f32> to implement CanTween
+#[derive(Clone, Debug, Default)]
+pub struct TweenableVector(pub Vec<f32>);
+
+impl CanTween for TweenableVector {
+    fn ease(from: Self, to: Self, time: impl keyframe::num_traits::Float) -> Self {
+        let t = time.to_f64().unwrap();
+        let len = from.0.len().min(to.0.len());
+        let mut result = Vec::with_capacity(len);
+
+        for i in 0..len {
+            let start = from.0[i] as f64;
+            let end = to.0[i] as f64;
+            let val = start + (end - start) * t;
+            result.push(val as f32);
+        }
+
+        // If lengths differ, maybe we should fill with 0 or the target value?
+        // But for shader uniforms, length usually matches.
+        // We'll just take the min length.
+
+        TweenableVector(result)
+    }
+}
+
 #[derive(Clone)]
 pub struct Animated<T>
-where T: Copy + keyframe::CanTween + Default
+where T: Clone + keyframe::CanTween + Default
 {
     pub raw_keyframes: Vec<(T, f64, EasingType)>,
     pub sequence: AnimationSequence<T>,
@@ -56,11 +81,11 @@ where T: Copy + keyframe::CanTween + Default
 }
 
 impl<T> Animated<T>
-where T: Copy + keyframe::CanTween + Default
+where T: Clone + keyframe::CanTween + Default
 {
     pub fn new(initial: T) -> Self {
-        let raw = vec![(initial, 0.0, EasingType::Linear)];
-        let kf = Keyframe::new(initial, 0.0, EasingType::Linear);
+        let raw = vec![(initial.clone(), 0.0, EasingType::Linear)];
+        let kf = Keyframe::new(initial.clone(), 0.0, EasingType::Linear);
 
         Self {
             sequence: AnimationSequence::from(vec![kf]),
@@ -73,12 +98,12 @@ where T: Copy + keyframe::CanTween + Default
         let current_end_time = self.sequence.duration();
         let new_time = current_end_time + duration;
 
-        self.raw_keyframes.push((target, new_time, easing));
+        self.raw_keyframes.push((target.clone(), new_time, easing));
 
         // Rebuild sequence
         let frames: Vec<Keyframe<T>> = self.raw_keyframes.iter()
             .map(|(val, time, ease_type)| {
-                Keyframe::new(*val, *time, *ease_type)
+                Keyframe::new(val.clone(), *time, *ease_type)
             })
             .collect();
 
@@ -130,15 +155,6 @@ impl Animated<f32> {
 
         let frames = solve_spring(start, target, config);
 
-        // Append generated frames as linear segments
-        // We accumulate duration because add_keyframe expects duration relative to previous
-        // But add_keyframe logic is: new_time = current_end_time + duration
-        // Wait, add_keyframe takes `duration` as the delta from previous keyframe?
-        // Let's check my implementation of add_keyframe above:
-        // let current_end_time = self.sequence.duration();
-        // let new_time = current_end_time + duration;
-        // So yes, duration is the segment duration.
-
         let mut previous_time = 0.0;
         for (value, time) in frames {
              let dt = time - previous_time;
@@ -188,7 +204,7 @@ fn solve_spring(start: f32, end: f32, config: SpringConfig) -> Vec<(f32, f64)> {
 }
 
 impl<T> fmt::Debug for Animated<T>
-where T: Copy + keyframe::CanTween + Default + fmt::Debug
+where T: Clone + keyframe::CanTween + Default + fmt::Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Animated")

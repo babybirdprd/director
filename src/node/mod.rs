@@ -6,7 +6,7 @@ use skia_safe::{
 };
 use taffy::style::Style;
 use crate::element::{Element, Color, TextSpan, TextFit, TextShadow};
-use crate::animation::{Animated, EasingType};
+use crate::animation::{Animated, EasingType, TweenableVector};
 use crate::director::Director;
 use crate::layout::LayoutEngine;
 use crate::render::render_recursive;
@@ -44,12 +44,27 @@ fn parse_easing(e: &str) -> EasingType {
 // --- Effect Node & Types ---
 
 #[derive(Debug, Clone)]
+pub enum ShaderUniform {
+    Float(Animated<f32>),
+    Vec(Animated<TweenableVector>),
+}
+
+impl ShaderUniform {
+    pub fn update(&mut self, time: f64) {
+        match self {
+            ShaderUniform::Float(a) => a.update(time),
+            ShaderUniform::Vec(a) => a.update(time),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum EffectType {
     Blur(Animated<f32>),
     ColorMatrix(Vec<f32>),
     RuntimeShader {
         sksl: String,
-        uniforms: HashMap<String, Animated<f32>>,
+        uniforms: HashMap<String, ShaderUniform>,
     },
     DropShadow {
         blur: Animated<f32>,
@@ -79,7 +94,12 @@ impl EffectType {
     }
 }
 
-fn build_effect_filter(effects: &[EffectType], shader_cache: Option<&Arc<Mutex<HashMap<String, RuntimeEffect>>>>) -> Option<skia_safe::ImageFilter> {
+fn build_effect_filter(
+    effects: &[EffectType],
+    shader_cache: Option<&Arc<Mutex<HashMap<String, RuntimeEffect>>>>,
+    resolution: (f32, f32),
+    time: f32
+) -> Option<skia_safe::ImageFilter> {
     let mut current_filter = None;
     for effect in effects {
         match effect {
@@ -133,8 +153,21 @@ fn build_effect_filter(effects: &[EffectType], shader_cache: Option<&Arc<Mutex<H
 
                     if let Some(effect) = cache.get(sksl) {
                          let mut builder = RuntimeShaderBuilder::new(effect.clone());
+
+                         // Inject Automatic Uniforms
+                         let _ = builder.set_uniform_float("u_resolution", &[resolution.0, resolution.1]);
+                         let _ = builder.set_uniform_float("u_time", &[time]);
+
                          for (key, val) in uniforms {
-                             let _ = builder.set_uniform_float(key, &[val.current_value]);
+                             match val {
+                                 ShaderUniform::Float(anim) => {
+                                     let _ = builder.set_uniform_float(key, &[anim.current_value]);
+                                 },
+                                 ShaderUniform::Vec(anim) => {
+                                     let vec_data = &anim.current_value.0;
+                                     let _ = builder.set_uniform_float(key, vec_data);
+                                 }
+                             }
                          }
                          // "image" is the standard name for the input texture in SkSL for ImageFilters
                          current_filter = image_filters::runtime_shader(&builder, "image", current_filter);
@@ -150,6 +183,7 @@ pub struct EffectNode {
     pub effects: Vec<EffectType>,
     pub style: Style,
     pub shader_cache: Arc<Mutex<HashMap<String, RuntimeEffect>>>,
+    pub current_time: f32,
 }
 
 impl Clone for EffectNode {
@@ -158,6 +192,7 @@ impl Clone for EffectNode {
             effects: self.effects.clone(),
             style: self.style.clone(),
             shader_cache: self.shader_cache.clone(),
+            current_time: self.current_time,
         }
     }
 }
@@ -179,6 +214,7 @@ impl Element for EffectNode {
     }
 
     fn update(&mut self, time: f64) -> bool {
+        self.current_time = time as f32;
         for effect in &mut self.effects {
             effect.update(time);
         }
@@ -186,7 +222,13 @@ impl Element for EffectNode {
     }
 
     fn render(&self, canvas: &Canvas, rect: Rect, opacity: f32, draw_children: &mut dyn FnMut(&Canvas)) {
-        let filter = build_effect_filter(&self.effects, Some(&self.shader_cache));
+        let resolution = (rect.width(), rect.height());
+        let filter = build_effect_filter(
+            &self.effects,
+            Some(&self.shader_cache),
+            resolution,
+            self.current_time
+        );
 
         let mut paint = Paint::default();
         paint.set_alpha_f(opacity);
@@ -205,7 +247,9 @@ impl Element for EffectNode {
         for effect in &mut self.effects {
              if let EffectType::RuntimeShader { uniforms, .. } = effect {
                  if let Some(anim) = uniforms.get_mut(property) {
-                     anim.add_segment(start, target, duration, ease_fn);
+                     if let ShaderUniform::Float(a) = anim {
+                        a.add_segment(start, target, duration, ease_fn);
+                     }
                  }
              }
         }
@@ -215,10 +259,12 @@ impl Element for EffectNode {
         for effect in &mut self.effects {
              if let EffectType::RuntimeShader { uniforms, .. } = effect {
                  if let Some(anim) = uniforms.get_mut(property) {
-                     if let Some(s) = start {
-                         anim.add_spring_with_start(s, target, config);
-                     } else {
-                         anim.add_spring(target, config);
+                     if let ShaderUniform::Float(a) = anim {
+                         if let Some(s) = start {
+                             a.add_spring_with_start(s, target, config);
+                         } else {
+                             a.add_spring(target, config);
+                         }
                      }
                  }
              }
@@ -322,7 +368,15 @@ impl Element for BoxNode {
              });
         }
 
-        let filter = build_effect_filter(&effects, None);
+        // BoxNode effects don't use RuntimeShader for now, so we pass dummy resolution/time
+        // Or we could pass proper ones if we wanted to support shaders on BoxNode later.
+        // For now, these effects (Blur, DropShadow) ignore resolution/time.
+        let filter = build_effect_filter(
+            &effects,
+            None,
+            (rect.width(), rect.height()),
+            0.0
+        );
         if let Some(f) = filter {
             paint.set_image_filter(f);
         }
