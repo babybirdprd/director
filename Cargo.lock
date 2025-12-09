@@ -686,7 +686,7 @@ dependencies = [
 
 [[package]]
 name = "director-cli"
-version = "1.1.1"
+version = "0.1.0"
 dependencies = [
  "director-core",
  "rhai",
@@ -722,6 +722,23 @@ dependencies = [
  "unicode-segmentation",
  "usvg",
  "video-rs",
+]
+
+[[package]]
+name = "director-pipeline"
+version = "0.1.0"
+dependencies = [
+ "director-core",
+ "director-schema",
+]
+
+[[package]]
+name = "director-schema"
+version = "0.1.0"
+dependencies = [
+ "director-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

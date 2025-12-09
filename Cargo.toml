@@ -1,6 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["crates/*"]
+members = [
+    "crates/director-core",
+    "crates/director-cli",
+    "crates/director-schema",
+    "crates/director-pipeline",
+    "crates/lottie-core",
+    "crates/lottie-data",
+    "crates/lottie-skia"
+]
 
 [workspace.package]
 version = "0.1.0"
