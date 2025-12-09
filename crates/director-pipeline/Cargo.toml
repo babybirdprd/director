@@ -1,0 +1,8 @@
+[package]
+name = "director-pipeline"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+director-core = { path = "../director-core" }
+director-schema = { path = "../director-schema" }

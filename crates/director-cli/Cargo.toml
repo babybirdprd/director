@@ -1,6 +1,6 @@
 [package]
 name = "director-cli"
-version = "1.1.1"
+version = "0.1.0"
 edition = "2021"
 description = "CLI for the Director rendering engine"
 license = "MIT"
