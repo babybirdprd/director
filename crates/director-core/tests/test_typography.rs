@@ -1,7 +1,7 @@
-use director_engine::{Director, node::TextNode, element::{TextSpan, TextFit, Element}};
+use director_core::{Director, node::TextNode, element::{TextSpan, TextFit, Element}};
 use std::sync::Arc;
-use director_engine::video_wrapper::RenderMode;
-use director_engine::DefaultAssetLoader;
+use director_core::video_wrapper::RenderMode;
+use director_core::DefaultAssetLoader;
 
 #[test]
 fn test_text_fit_shrink() {
@@ -41,7 +41,7 @@ fn test_text_fit_shrink() {
     let id = director.add_node(Box::new(text_node));
 
     // Make it scene root
-    let item = director_engine::director::TimelineItem {
+    let item = director_core::director::TimelineItem {
         scene_root: id,
         start_time: 0.0,
         duration: 5.0,
@@ -53,7 +53,7 @@ fn test_text_fit_shrink() {
     // Render frame 0 (trigger layout and post_layout)
     // We don't need a real canvas, just trigger the pipeline
     let mut surface = skia_safe::surfaces::raster_n32_premul((1920, 1080)).unwrap();
-    director_engine::render::render_frame(&mut director, 0.0, surface.canvas());
+    director_core::render::render_frame(&mut director, 0.0, surface.canvas());
 
     // Check font size
     let node = director.get_node(id).unwrap();
@@ -71,15 +71,15 @@ fn test_render_video_output() {
 
     let spans = vec![TextSpan {
         text: "Typography Engine: Text-to-Fit Test".to_string(),
-        color: Some(director_engine::element::Color::WHITE),
+        color: Some(director_core::element::Color::WHITE),
         font_family: None,
         font_weight: Some(700),
         font_style: None,
         font_size: Some(150.0),
-        background_color: Some(director_engine::element::Color::new(0.0, 0.0, 1.0, 1.0)),
+        background_color: Some(director_core::element::Color::new(0.0, 0.0, 1.0, 1.0)),
         background_padding: Some(20.0),
         stroke_width: Some(2.0),
-        stroke_color: Some(director_engine::element::Color::BLACK),
+        stroke_color: Some(director_core::element::Color::BLACK),
         fill_gradient: None,
     }];
 
@@ -105,15 +105,15 @@ fn test_render_video_output() {
     };
 
     // Add Shadow
-    text_node.shadow = Some(director_engine::element::TextShadow {
-        color: director_engine::element::Color::new(0.0, 0.0, 0.0, 0.5),
+    text_node.shadow = Some(director_core::element::TextShadow {
+        color: director_core::element::Color::new(0.0, 0.0, 0.0, 0.5),
         blur: 10.0,
         offset: (10.0, 10.0),
     });
 
     let id = director.add_node(Box::new(text_node));
 
-    let item = director_engine::director::TimelineItem {
+    let item = director_core::director::TimelineItem {
         scene_root: id,
         start_time: 0.0,
         duration: 2.0, // 2 seconds
@@ -128,5 +128,5 @@ fn test_render_video_output() {
         std::fs::remove_file(&out_path).unwrap();
     }
 
-    director_engine::render::render_export(&mut director, out_path, None, None).unwrap();
+    director_core::render::render_export(&mut director, out_path, None, None).unwrap();
 }

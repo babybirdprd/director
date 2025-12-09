@@ -1,4 +1,4 @@
-use director_engine::{scripting::register_rhai_api, DefaultAssetLoader, scripting::MovieHandle};
+use director_core::{scripting::register_rhai_api, DefaultAssetLoader, scripting::MovieHandle};
 use rhai::Engine;
 use std::sync::Arc;
 

@@ -1,11 +1,11 @@
-use director_engine::scripting::register_rhai_api;
+use director_core::render::render_export;
+use director_core::scripting::register_rhai_api;
+use director_core::DefaultAssetLoader;
 use rhai::Engine;
-use director_engine::render::render_export;
-use director_engine::DefaultAssetLoader;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::env;
 use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -44,7 +44,7 @@ fn main() {
     let mut engine = Engine::new();
     register_rhai_api(&mut engine, Arc::new(DefaultAssetLoader));
 
-    match engine.eval::<director_engine::scripting::MovieHandle>(&script) {
+    match engine.eval::<director_core::scripting::MovieHandle>(&script) {
         Ok(movie) => {
             println!("Script evaluated successfully. Starting render...");
             let mut director = movie.director.lock().unwrap();
@@ -52,7 +52,7 @@ fn main() {
                 Ok(_) => println!("Render complete."),
                 Err(e) => println!("Render failed: {}", e),
             }
-        },
+        }
         Err(e) => println!("Script Error: {}", e),
     }
 }

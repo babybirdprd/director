@@ -685,7 +685,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "director-engine"
+name = "director-cli"
+version = "1.1.1"
+dependencies = [
+ "director-core",
+ "rhai",
+]
+
+[[package]]
+name = "director-core"
 version = "1.1.1"
 dependencies = [
  "anyhow",

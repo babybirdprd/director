@@ -1,4 +1,4 @@
-use director_engine::audio::resample_audio;
+use director_core::audio::resample_audio;
 use hound;
 use std::f32::consts::PI;
 

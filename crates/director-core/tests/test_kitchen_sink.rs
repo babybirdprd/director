@@ -1,4 +1,4 @@
-use director_engine::{scripting::{register_rhai_api, MovieHandle}, DefaultAssetLoader};
+use director_core::{scripting::{register_rhai_api, MovieHandle}, DefaultAssetLoader};
 use rhai::Engine;
 use std::sync::Arc;
 use std::fs;
@@ -10,14 +10,20 @@ fn test_kitchen_sink_layout() {
     let loader = Arc::new(DefaultAssetLoader);
     register_rhai_api(&mut engine, loader);
 
-    let script = fs::read_to_string("tests/kitchen_sink.rhai").expect("Failed to read script");
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let script_path = std::path::Path::new(manifest_dir).join("tests/kitchen_sink.rhai");
+    let script = fs::read_to_string(&script_path).expect("Failed to read script");
+    
+    // Set current dir to workspace root for asset paths in script
+    let workspace_root = std::path::Path::new(manifest_dir).parent().unwrap().parent().unwrap();
+    std::env::set_current_dir(workspace_root).ok();
 
     let result = engine.eval::<MovieHandle>(&script).expect("Script failed");
     let mut director = result.director.lock().unwrap();
 
     // Trigger Layout (Frame 0)
     let mut surface = skia_safe::surfaces::raster_n32_premul((1920, 1080)).unwrap();
-    director_engine::render::render_frame(&mut director, 0.0, surface.canvas());
+    director_core::render::render_frame(&mut director, 0.0, surface.canvas());
 
     // Verify Layout Hierarchy
     let scene_root_id = director.timeline[0].scene_root;
@@ -56,5 +62,5 @@ fn test_kitchen_sink_layout() {
     }
 
     println!("Rendering kitchen_sink.mp4 (this may take a moment)...");
-    director_engine::render::render_export(&mut director, out_path, None, None).expect("Export failed");
+    director_core::render::render_export(&mut director, out_path, None, None).expect("Export failed");
 }

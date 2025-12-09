@@ -21,7 +21,7 @@
 //! The core entry point is the [`Director`] struct, which manages the timeline, scenes, and rendering resources.
 //!
 //! ```rust,no_run
-//! use director_engine::{Director, DefaultAssetLoader, video_wrapper::RenderMode};
+//! use director_core::{Director, DefaultAssetLoader, video_wrapper::RenderMode};
 //! use std::sync::Arc;
 //!
 //! // Initialize the Director

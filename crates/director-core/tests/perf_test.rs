@@ -1,4 +1,4 @@
-use director_engine::{Director, DefaultAssetLoader, director::DirectorContext, video_wrapper::RenderMode};
+use director_core::{Director, DefaultAssetLoader, director::DirectorContext, video_wrapper::RenderMode};
 use std::sync::Arc;
 use std::time::Instant;
 

@@ -73,7 +73,7 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
 
     #[cfg(feature = "vulkan")]
     if let Some(ctx) = gpu_context {
-        surface = skia_safe::surfaces::render_target(
+        surface = skia_safe::gpu::surfaces::render_target(
             ctx,
             Budgeted::Yes,
             &info,
@@ -163,6 +163,7 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
                      render_recursive(director, item.scene_root, canvas, 1.0);
                  }
              }
+             if time < 0.1 { eprintln!("[Frame] render complete"); }
         };
 
         if samples == 1 {

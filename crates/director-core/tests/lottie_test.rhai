@@ -15,7 +15,7 @@ let box1 = root.add_box(#{
     "height": 400,
     "bg_color": "#222222"
 });
-let lottie1 = box1.add_lottie("tests/fixtures/lottie_simple.json", #{
+let lottie1 = box1.add_lottie("crates/director-core/tests/fixtures/lottie_simple.json", #{
     "width": "100%",
     "height": "100%",
     "loop": true
@@ -29,7 +29,7 @@ let box2 = root.add_box(#{
     "bg_color": "#333333"
 });
 // Using original downloaded file, not temp
-box2.add_lottie("tests/fixtures/lottie_u4j.json", #{
+box2.add_lottie("crates/director-core/tests/fixtures/lottie_u4j.json", #{
     "width": "100%",
     "height": "100%",
     "loop": true
@@ -41,7 +41,7 @@ let box3 = root.add_box(#{
     "height": 400,
     "bg_color": "#444444"
 });
-box3.add_lottie("tests/fixtures/lottie_mobilo_a.json", #{
+box3.add_lottie("crates/director-core/tests/fixtures/lottie_mobilo_a.json", #{
     "width": "100%",
     "height": "100%",
     "loop": true

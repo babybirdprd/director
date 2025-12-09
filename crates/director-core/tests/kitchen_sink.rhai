@@ -44,7 +44,7 @@ let img_container = col_img.add_box(#{
     shadow_blur: 20.0
 });
 
-let img = img_container.add_image("tests/assets/test_image.png", #{
+let img = img_container.add_image("crates/director-core/tests/assets/test_image.png", #{
     width: "100%",
     height: "100%",
 });
@@ -87,7 +87,7 @@ let vid_container = col_vid.add_box(#{
     shadow_blur: 20.0
 });
 
-let vid = vid_container.add_video("tests/assets/test_video.mp4", #{
+let vid = vid_container.add_video("crates/director-core/tests/assets/test_video.mp4", #{
     width: "100%",
     height: "100%"
 });

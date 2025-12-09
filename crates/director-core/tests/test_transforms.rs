@@ -1,4 +1,4 @@
-use director_engine::{scripting::register_rhai_api, DefaultAssetLoader};
+use director_core::{scripting::register_rhai_api, DefaultAssetLoader};
 use rhai::Engine;
 use std::sync::Arc;
 

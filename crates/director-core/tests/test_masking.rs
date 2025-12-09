@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use director_engine::scripting::register_rhai_api;
+    use director_core::scripting::register_rhai_api;
     use rhai::Engine;
-    use director_engine::DefaultAssetLoader;
+    use director_core::DefaultAssetLoader;
     use std::sync::Arc;
 
     // We don't necessarily need to run render_export which requires ffmpeg/video-rs
@@ -51,7 +51,7 @@ mod tests {
             movie
         "##;
 
-        let result = engine.eval::<director_engine::scripting::MovieHandle>(script);
+        let result = engine.eval::<director_core::scripting::MovieHandle>(script);
         assert!(result.is_ok(), "Script failed: {}", result.err().unwrap());
 
         if let Ok(movie) = result {

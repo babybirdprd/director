@@ -657,8 +657,9 @@ impl Element for TextNode {
         self.last_layout_rect = rect;
 
         if self.fit_mode == TextFit::Shrink {
-            let mut fs = self.font_system.lock().unwrap();
+            // IMPORTANT: Lock buffer BEFORE font_system to prevent deadlock with render()
             let mut buf_guard = self.buffer.lock().unwrap();
+            let mut fs = self.font_system.lock().unwrap();
 
             if let Some(buf) = buf_guard.as_mut() {
                 let target_width = rect.width();
@@ -716,7 +717,11 @@ impl Element for TextNode {
 
             let font_mgr = FontMgr::default();
             // Default font setup (fallback)
-            let typeface = font_mgr.match_family_style("Sans Serif", FontStyle::normal()).unwrap();
+            let typeface = font_mgr.match_family_style("Sans Serif", FontStyle::normal())
+                .or_else(|| font_mgr.match_family_style("Arial", FontStyle::normal()))
+                .or_else(|| font_mgr.match_family_style("Segoe UI", FontStyle::normal()))
+                .or_else(|| font_mgr.match_family_style("", FontStyle::normal())) // System default
+                .expect("Failed to load default typeface");
             let font = skia_safe::Font::new(typeface, Some(self.default_font_size.current_value));
 
             let ranges = self.build_span_ranges();
@@ -905,7 +910,7 @@ impl Element for TextNode {
                      // 4. Resolve Style
                      let size = span.font_size.unwrap_or(self.default_font_size.current_value);
 
-                     // Check cache or load
+                     // Check cache or load typeface
                      let font_id = glyph.font_id;
                      let mut typeface_opt = {
                          let cache = self.typeface_cache.lock().unwrap();
@@ -913,8 +918,7 @@ impl Element for TextNode {
                      };
 
                      if typeface_opt.is_none() {
-                         // Cache miss, load from font_system
-                         let fs = self.font_system.lock().unwrap();
+                         // Cache miss - load from font_system (REUSE existing fs lock from line 709)
                          if let Some(face) = fs.db().face(font_id) {
                              let data = match &face.source {
                                  Source::Binary(arc) => Some(Data::new_copy(arc.as_ref().as_ref())),
@@ -939,10 +943,14 @@ impl Element for TextNode {
                          }
                      }
 
-                     // Fallback
+                     // Fallback - try multiple font families
                      let typeface = typeface_opt.unwrap_or_else(|| {
                          let mgr = FontMgr::new();
-                         mgr.match_family_style("Sans Serif", FontStyle::normal()).unwrap()
+                         mgr.match_family_style("Sans Serif", FontStyle::normal())
+                             .or_else(|| mgr.match_family_style("Arial", FontStyle::normal()))
+                             .or_else(|| mgr.match_family_style("Segoe UI", FontStyle::normal()))
+                             .or_else(|| mgr.match_family_style("", FontStyle::normal()))
+                             .expect("Failed to load any default typeface")
                      });
 
                      let glyph_font = skia_safe::Font::new(typeface, Some(size));
