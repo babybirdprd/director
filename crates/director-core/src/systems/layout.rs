@@ -1,6 +1,6 @@
-use taffy::prelude::*;
 use crate::scene::SceneGraph;
 use crate::types::NodeId;
+use taffy::prelude::*;
 
 /// Manages the layout computation using the Taffy engine.
 ///
@@ -66,26 +66,26 @@ impl LayoutEngine {
         // 2. Sync Phase B: Update Relationships (Children)
         // We iterate again. Since we updated all nodes in Phase A, all valid children should be in node_map.
         for (id, node_opt) in scene.nodes.iter().enumerate() {
-             if let Some(node) = node_opt {
-                 if let Some(&t_id) = self.node_map.get(&id) {
-                     let mut children_t_ids = Vec::with_capacity(node.children.len() + 1);
+            if let Some(node) = node_opt {
+                if let Some(&t_id) = self.node_map.get(&id) {
+                    let mut children_t_ids = Vec::with_capacity(node.children.len() + 1);
 
-                     for &child_id in &node.children {
-                         if let Some(&child_t_id) = self.node_map.get(&child_id) {
-                             children_t_ids.push(child_t_id);
-                         }
-                     }
-                     if let Some(mask_id) = node.mask_node {
-                         if let Some(&mask_t_id) = self.node_map.get(&mask_id) {
-                             children_t_ids.push(mask_t_id);
-                         }
-                     }
+                    for &child_id in &node.children {
+                        if let Some(&child_t_id) = self.node_map.get(&child_id) {
+                            children_t_ids.push(child_t_id);
+                        }
+                    }
+                    if let Some(mask_id) = node.mask_node {
+                        if let Some(&mask_t_id) = self.node_map.get(&mask_id) {
+                            children_t_ids.push(mask_t_id);
+                        }
+                    }
 
-                     // Always set children to ensure structure is correct
-                     // Taffy's set_children is optimized to do nothing if children list hasn't changed.
-                     self.taffy.set_children(t_id, &children_t_ids).unwrap();
-                 }
-             }
+                    // Always set children to ensure structure is correct
+                    // Taffy's set_children is optimized to do nothing if children list hasn't changed.
+                    self.taffy.set_children(t_id, &children_t_ids).unwrap();
+                }
+            }
         }
 
         // 3. Compute Layout for Active Roots
@@ -106,31 +106,38 @@ impl LayoutEngine {
         for root_id in active_roots {
             // Need to handle missing node safely
             if scene.get_node(root_id).is_some() {
-                 if let Some(&root_t_id) = self.node_map.get(&root_id) {
+                if let Some(&root_t_id) = self.node_map.get(&root_id) {
                     // Taffy measure closure
-                    let measure_func = |known_dimensions: Size<Option<f32>>, available_space: Size<AvailableSpace>, _node_id: taffy::NodeId, context: Option<&mut NodeId>, _style: &Style| -> Size<f32> {
+                    let measure_func = |known_dimensions: Size<Option<f32>>,
+                                        available_space: Size<AvailableSpace>,
+                                        _node_id: taffy::NodeId,
+                                        context: Option<&mut NodeId>,
+                                        _style: &Style|
+                     -> Size<f32> {
                         if let Some(director_node_id) = context {
-                             if let Some(node) = scene.get_node(*director_node_id) {
-                                 if node.element.needs_measure() {
-                                     return node.element.measure(known_dimensions, available_space);
-                                 }
-                             }
+                            if let Some(node) = scene.get_node(*director_node_id) {
+                                if node.element.needs_measure() {
+                                    return node.element.measure(known_dimensions, available_space);
+                                }
+                            }
                         }
                         Size::ZERO
                     };
 
-                    self.taffy.compute_layout_with_measure(
-                        root_t_id,
-                        Size {
-                            width: AvailableSpace::Definite(width as f32),
-                            height: AvailableSpace::Definite(height as f32),
-                        },
-                        measure_func
-                    ).unwrap();
+                    self.taffy
+                        .compute_layout_with_measure(
+                            root_t_id,
+                            Size {
+                                width: AvailableSpace::Definite(width as f32),
+                                height: AvailableSpace::Definite(height as f32),
+                            },
+                            measure_func,
+                        )
+                        .unwrap();
 
                     // 4. Write back results to Scene Nodes
                     self.write_back_recursive(scene, root_id);
-                 }
+                }
             }
         }
     }
@@ -139,9 +146,19 @@ impl LayoutEngine {
         if let Some(t_id) = self.node_map.get(&node_id) {
             let layout = self.taffy.layout(*t_id).unwrap();
 
+            // Debug Print
+            // println!("Node {}: Layout = {:?}", node_id, layout);
+            // Since we can't see NodeId easily (it's Uuid), I'll just print rect.
+            // Actually, we can check node type if we want, but let's just print basic info first.
+
             // Scope for mutable borrow
             let (children, mask_node) = {
                 let node = scene.get_node_mut(node_id).unwrap();
+
+                // Simple debug to identify huge or tiny nodes
+                if layout.size.width < 1.0 || layout.size.height < 1.0 {
+                    // println!("[Layout Warning] Node {:?} resolved to excessively small size: {:?}", node_id, layout.size);
+                }
 
                 node.layout_rect = skia_safe::Rect::from_xywh(
                     layout.location.x,
@@ -153,12 +170,12 @@ impl LayoutEngine {
             };
 
             // Recurse
-             for child_id in children {
-                 self.write_back_recursive(scene, child_id);
-             }
-             if let Some(mask_id) = mask_node {
-                 self.write_back_recursive(scene, mask_id);
-             }
+            for child_id in children {
+                self.write_back_recursive(scene, child_id);
+            }
+            if let Some(mask_id) = mask_node {
+                self.write_back_recursive(scene, mask_id);
+            }
         }
     }
 }
