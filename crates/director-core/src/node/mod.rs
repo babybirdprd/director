@@ -1429,7 +1429,7 @@ impl Element for CompositionNode {
              c.clear(skia_safe::Color::TRANSPARENT);
 
              // Reuse render logic
-             let current_time = d.nodes.iter().flatten().next().map(|n| n.last_visit_time).unwrap_or(0.0);
+             let current_time = d.scene.nodes.iter().flatten().next().map(|n| n.last_visit_time).unwrap_or(0.0);
 
              let mut items: Vec<(usize, crate::director::TimelineItem)> = d.timeline.iter().cloned().enumerate()
                  .filter(|(_, item)| current_time >= item.start_time && current_time < item.start_time + item.duration)

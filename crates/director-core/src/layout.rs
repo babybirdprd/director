@@ -31,7 +31,7 @@ impl LayoutEngine {
     pub fn compute_layout(&mut self, director: &mut Director, time: f64) {
         // 1. Sync Phase A: Ensure Nodes Exist & Update Styles
         // Iterate over all potential node IDs in the Director
-        for (id, node_opt) in director.nodes.iter_mut().enumerate() {
+        for (id, node_opt) in director.scene.nodes.iter_mut().enumerate() {
             if let Some(node) = node_opt {
                 // Ensure existence in Taffy
                 let t_id = if let Some(&existing_t_id) = self.node_map.get(&id) {
@@ -59,7 +59,7 @@ impl LayoutEngine {
 
         // 2. Sync Phase B: Update Relationships (Children)
         // We iterate again. Since we updated all nodes in Phase A, all valid children should be in node_map.
-        for (id, node_opt) in director.nodes.iter().enumerate() {
+        for (id, node_opt) in director.scene.nodes.iter().enumerate() {
              if let Some(node) = node_opt {
                  if let Some(&t_id) = self.node_map.get(&id) {
                      let mut children_t_ids = Vec::with_capacity(node.children.len() + 1);
@@ -93,7 +93,7 @@ impl LayoutEngine {
 
         for root_id in active_roots {
             // Need to handle missing node safely
-            if director.get_node(root_id).is_some() {
+            if director.scene.get_node(root_id).is_some() {
                  if let Some(&root_t_id) = self.node_map.get(&root_id) {
                     self.taffy.compute_layout(
                         root_t_id,
@@ -116,7 +116,7 @@ impl LayoutEngine {
 
             // Scope for mutable borrow
             let (children, mask_node) = {
-                let node = director.get_node_mut(node_id).unwrap();
+                let node = director.scene.get_node_mut(node_id).unwrap();
 
                 node.layout_rect = skia_safe::Rect::from_xywh(
                     layout.location.x,

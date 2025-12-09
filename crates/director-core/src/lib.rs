@@ -35,6 +35,9 @@
 //! );
 //! ```
 
+/// The Scene Graph Data Structure.
+pub mod scene;
+
 /// Defines the base `Element` trait that all visual nodes must implement.
 pub mod element;
 
