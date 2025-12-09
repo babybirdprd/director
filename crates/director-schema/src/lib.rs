@@ -90,3 +90,59 @@ pub struct Animation {
     pub start_time: f64, // Relative to scene start
     pub easing: EasingType,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use director_core::types::Color;
+
+    #[test]
+    fn test_schema_serialization() {
+        let movie = MovieRequest {
+            width: 1920,
+            height: 1080,
+            fps: 30,
+            scenes: vec![
+                Scene {
+                    id: "scene_1".to_string(),
+                    duration_secs: 5.0,
+                    background: Some(Color::BLACK),
+                    root: Node {
+                        id: "root".to_string(),
+                        kind: NodeKind::Box { border_radius: 0.0 },
+                        style: StyleMap {
+                            width: Some("100%".to_string()),
+                            height: Some("100%".to_string()),
+                            bg_color: Some(Color::new(0.1, 0.1, 0.1, 1.0)),
+                            ..Default::default()
+                        },
+                        transform: TransformMap::default(),
+                        animations: vec![],
+                        children: vec![
+                            Node {
+                                id: "text_1".to_string(),
+                                kind: NodeKind::Text {
+                                    content: "Hello JSON".to_string(),
+                                    font_size: 100.0,
+                                },
+                                style: StyleMap {
+                                    bg_color: Some(Color::WHITE),
+                                    ..Default::default()
+                                },
+                                transform: TransformMap::default(),
+                                animations: vec![],
+                                children: vec![],
+                            }
+                        ],
+                    },
+                }
+            ],
+        };
+
+        let json = serde_json::to_string_pretty(&movie).unwrap();
+        println!("{}", json);
+
+        // Ensure we can read it back
+        let _loaded: MovieRequest = serde_json::from_str(&json).unwrap();
+    }
+}
