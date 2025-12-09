@@ -7,6 +7,7 @@ use crate::audio::{AudioMixer, AudioTrack};
 use crate::video_wrapper::RenderMode;
 use crate::types::{NodeId, PathAnimationState, Transform};
 use crate::systems::assets::AssetManager;
+use crate::scene::{SceneGraph, SceneNode};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use skia_safe::RuntimeEffect;
@@ -16,55 +17,6 @@ use cosmic_text::{FontSystem, SwashCache, fontdb::Source};
 #[derive(Clone)]
 pub struct DirectorContext {
     pub assets: AssetManager,
-}
-
-/// A wrapper around an `Element` that adds scene graph relationships and state.
-///
-/// `SceneNode` encapsulates the specific logic for hierarchy, layout positioning,
-/// masking, and temporal state (local time).
-#[derive(Clone)]
-pub struct SceneNode {
-    /// The actual visual element (Box, Text, etc.)
-    pub element: Box<dyn Element>,
-    /// Indices of child nodes.
-    pub children: Vec<NodeId>,
-    /// Index of parent node.
-    pub parent: Option<NodeId>,
-    /// The computed absolute layout rectangle (set by `LayoutEngine`).
-    pub layout_rect: skia_safe::Rect,
-    /// The local time for the current frame (computed during update pass).
-    pub local_time: f64,
-    /// The global time when this node was last visited/prepared for update.
-    pub last_visit_time: f64,
-
-    // Path Animation
-    pub path_animation: Option<PathAnimationState>,
-    pub transform: Transform,
-
-    // Masking & Compositing
-    pub mask_node: Option<NodeId>,
-    pub blend_mode: skia_safe::BlendMode,
-
-    pub dirty_style: bool,
-}
-
-impl SceneNode {
-    /// Creates a new SceneNode wrapping the given Element.
-    pub fn new(element: Box<dyn Element>) -> Self {
-        Self {
-            element,
-            children: Vec::new(),
-            parent: None,
-            layout_rect: skia_safe::Rect::default(),
-            local_time: 0.0,
-            last_visit_time: -1.0,
-            path_animation: None,
-            transform: Transform::new(),
-            mask_node: None,
-            blend_mode: skia_safe::BlendMode::SrcOver,
-            dirty_style: true,
-        }
-    }
 }
 
 /// Represents a scene (or clip) on the timeline.
@@ -110,10 +62,8 @@ pub struct Transition {
 /// and shared resources (Assets, Fonts, Audio).
 #[derive(Clone)]
 pub struct Director {
-    /// The Arena of all nodes. Using `Option` allows for future removal/recycling.
-    pub nodes: Vec<Option<SceneNode>>,
-    /// Indices of nodes that have been removed and can be reused.
-    pub free_indices: Vec<usize>,
+    /// The Scene Graph.
+    pub scene: SceneGraph,
     /// The timeline of scenes.
     pub timeline: Vec<TimelineItem>,
     /// Active transitions.
@@ -167,8 +117,7 @@ impl Director {
         };
 
         Self {
-            nodes: Vec::new(),
-            free_indices: Vec::new(),
+            scene: SceneGraph::new(),
             timeline: Vec::new(),
             transitions: Vec::new(),
             width,
@@ -205,8 +154,8 @@ impl Director {
         while let Some((id, local_time)) = stack.pop() {
              // We access nodes directly to avoid self borrow issues with get_node if we were using &mut self methods
              // But here we need to read nodes.
-             if id < self.nodes.len() {
-                 if let Some(node) = &self.nodes[id] {
+             if id < self.scene.nodes.len() {
+                 if let Some(node) = &self.scene.nodes[id] {
                      // Check audio
                      if let Some(samples) = node.element.get_audio(local_time, samples_needed, self.audio_mixer.sample_rate) {
                          for (i, val) in samples.iter().enumerate() {
@@ -256,76 +205,6 @@ impl Director {
         self.audio_mixer.add_track(track)
     }
 
-    /// Adds a new element to the scene graph and returns its ID.
-    pub fn add_node(&mut self, element: Box<dyn Element>) -> NodeId {
-        if let Some(id) = self.free_indices.pop() {
-            self.nodes[id] = Some(SceneNode::new(element));
-            id
-        } else {
-            let id = self.nodes.len();
-            self.nodes.push(Some(SceneNode::new(element)));
-            id
-        }
-    }
-
-    /// Recursively destroys a node and its children, freeing their indices for reuse.
-    pub fn destroy_node(&mut self, id: NodeId) {
-        // 1. Check if node exists (and isn't already deleted)
-        if id >= self.nodes.len() || self.nodes[id].is_none() {
-            return;
-        }
-
-        // 2. Collect IDs to process (to avoid holding borrows on self.nodes)
-        let (parent_id, children_ids) = {
-            let node = self.nodes[id].as_ref().unwrap();
-            (node.parent, node.children.clone())
-        };
-
-        // 3. Detach from Parent
-        if let Some(pid) = parent_id {
-            self.remove_child(pid, id);
-        }
-
-        // 4. Recursively destroy children
-        for child_id in children_ids {
-            self.destroy_node(child_id);
-        }
-
-        // 5. Free the slot
-        self.nodes[id] = None;
-        self.free_indices.push(id);
-    }
-
-    /// Establishes a parent-child relationship between two nodes.
-    pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
-        if let Some(p_node) = self.nodes.get_mut(parent).and_then(|n| n.as_mut()) {
-            p_node.children.push(child);
-        }
-        if let Some(c_node) = self.nodes.get_mut(child).and_then(|n| n.as_mut()) {
-            c_node.parent = Some(parent);
-        }
-    }
-
-    /// Removes a child from a parent node's children list.
-    /// Does NOT affect the child's `parent` field (caller must handle that if needed, e.g. re-parenting).
-    pub fn remove_child(&mut self, parent: NodeId, child: NodeId) {
-        if let Some(p_node) = self.nodes.get_mut(parent).and_then(|n| n.as_mut()) {
-            if let Some(pos) = p_node.children.iter().position(|&x| x == child) {
-                p_node.children.remove(pos);
-            }
-        }
-    }
-
-    /// Returns a mutable reference to the SceneNode.
-    pub fn get_node_mut(&mut self, id: NodeId) -> Option<&mut SceneNode> {
-        self.nodes.get_mut(id).and_then(|n| n.as_mut())
-    }
-
-    /// Returns a shared reference to the SceneNode.
-    pub fn get_node(&self, id: NodeId) -> Option<&SceneNode> {
-        self.nodes.get(id).and_then(|n| n.as_ref())
-    }
-
     /// Updates the state of all active nodes for the given global time.
     ///
     /// This method calculates local time for each node, updates animations (transform, path),
@@ -346,10 +225,10 @@ impl Director {
         }
 
         while let Some((id, time)) = stack.pop() {
-            if id >= self.nodes.len() { continue; }
-            if self.nodes[id].is_none() { continue; }
+            if id >= self.scene.nodes.len() { continue; }
+            if self.scene.nodes[id].is_none() { continue; }
 
-            let node = self.nodes[id].as_mut().unwrap();
+            let node = self.scene.nodes[id].as_mut().unwrap();
 
             node.local_time = time;
             node.last_visit_time = global_time;
@@ -366,7 +245,7 @@ impl Director {
         }
 
         // Pass 2: Serial Update (Rayon removed)
-        for node_opt in self.nodes.iter_mut() {
+        for node_opt in self.scene.nodes.iter_mut() {
             if let Some(node) = node_opt {
                 if (node.last_visit_time - global_time).abs() < 0.0001 {
                     if node.element.update(node.local_time) {
@@ -403,7 +282,7 @@ impl Director {
     /// This is called after the Layout Engine has computed the final boxes, allowing elements
     /// to adjust their internal state (e.g., text resizing) based on the final layout.
     pub fn run_post_layout(&mut self, global_time: f64) {
-        for node_opt in self.nodes.iter_mut() {
+        for node_opt in self.scene.nodes.iter_mut() {
             if let Some(node) = node_opt {
                 if (node.last_visit_time - global_time).abs() < 0.0001 {
                     node.element.post_layout(node.layout_rect);

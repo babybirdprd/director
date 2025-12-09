@@ -68,12 +68,12 @@ fn extract_outer_style(source: &Style) -> Style {
 }
 
 fn apply_effect_to_node(d: &mut Director, node_id: NodeId, effect: EffectType) -> NodeId {
-    let parent_id_opt = d.get_node(node_id).and_then(|n| n.parent);
+    let parent_id_opt = d.scene.get_node(node_id).and_then(|n| n.parent);
 
     let mut wrapper_style = Style::default();
 
     // Modify target node style (Steal & Fill)
-    if let Some(node) = d.get_node_mut(node_id) {
+    if let Some(node) = d.scene.get_node_mut(node_id) {
         let original_style = node.element.layout_style();
         wrapper_style = extract_outer_style(&original_style);
 
@@ -103,14 +103,14 @@ fn apply_effect_to_node(d: &mut Director, node_id: NodeId, effect: EffectType) -
         current_time: 0.0,
     };
 
-    let effect_id = d.add_node(Box::new(effect_node));
+    let effect_id = d.scene.add_node(Box::new(effect_node));
 
     if let Some(parent_id) = parent_id_opt {
-        d.remove_child(parent_id, node_id);
-        d.add_child(parent_id, effect_id);
+        d.scene.remove_child(parent_id, node_id);
+        d.scene.add_child(parent_id, effect_id);
     }
 
-    d.add_child(effect_id, node_id);
+    d.scene.add_child(effect_id, node_id);
 
     // Update Root if needed
     for item in &mut d.timeline {
@@ -474,7 +474,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
             width: Dimension::percent(1.0),
             height: Dimension::percent(1.0),
         };
-        let id = d.add_node(Box::new(root));
+        let id = d.scene.add_node(Box::new(root));
 
         let item = TimelineItem {
             scene_root: id,
@@ -555,7 +555,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("destroy", |node: &mut NodeHandle| {
         let mut d = node.director.lock().unwrap();
-        d.destroy_node(node.id);
+        d.scene.destroy_node(node.id);
     });
 
     engine.register_fn("add_box", |parent: &mut NodeHandle, props: rhai::Map| {
@@ -604,8 +604,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
         parse_layout_style(&props, &mut box_node.style);
 
-        let id = d.add_node(Box::new(box_node));
-        d.add_child(parent.id, id);
+        let id = d.scene.add_node(Box::new(box_node));
+        d.scene.add_child(parent.id, id);
 
         NodeHandle { director: parent.director.clone(), id }
     });
@@ -656,8 +656,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
         parse_layout_style(&props, &mut box_node.style);
 
-        let id = d.add_node(Box::new(box_node));
-        d.add_child(scene.root_id, id);
+        let id = d.scene.add_node(Box::new(box_node));
+        d.scene.add_child(scene.root_id, id);
 
         NodeHandle { director: scene.director.clone(), id }
     });
@@ -667,8 +667,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
 
          let img_node = ImageNode::new(bytes);
-         let id = d.add_node(Box::new(img_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(img_node));
+         d.scene.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
@@ -678,13 +678,13 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
          match LottieNode::new(&bytes, HashMap::new(), &d.assets) {
              Ok(lottie_node) => {
-                 let id = d.add_node(Box::new(lottie_node));
-                 d.add_child(parent.id, id);
+                 let id = d.scene.add_node(Box::new(lottie_node));
+                 d.scene.add_child(parent.id, id);
                  NodeHandle { director: parent.director.clone(), id }
              }
              Err(e) => {
                  eprintln!("Failed to load lottie: {}", e);
-                 let id = d.add_node(Box::new(BoxNode::new()));
+                 let id = d.scene.add_node(Box::new(BoxNode::new()));
                  NodeHandle { director: parent.director.clone(), id }
              }
          }
@@ -717,13 +717,13 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                      lottie_node.loop_anim = v;
                  }
 
-                 let id = d.add_node(Box::new(lottie_node));
-                 d.add_child(parent.id, id);
+                 let id = d.scene.add_node(Box::new(lottie_node));
+                 d.scene.add_child(parent.id, id);
                  NodeHandle { director: parent.director.clone(), id }
              }
              Err(e) => {
                  eprintln!("Failed to load lottie: {}", e);
-                 let id = d.add_node(Box::new(BoxNode::new()));
+                 let id = d.scene.add_node(Box::new(BoxNode::new()));
                  NodeHandle { director: parent.director.clone(), id }
              }
          }
@@ -734,8 +734,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
 
          let vec_node = VectorNode::new(&bytes);
-         let id = d.add_node(Box::new(vec_node));
-         d.add_child(scene.root_id, id);
+         let id = d.scene.add_node(Box::new(vec_node));
+         d.scene.add_child(scene.root_id, id);
          NodeHandle { director: scene.director.clone(), id }
     });
 
@@ -746,8 +746,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let mut vec_node = VectorNode::new(&bytes);
          parse_layout_style(&props, &mut vec_node.style);
 
-         let id = d.add_node(Box::new(vec_node));
-         d.add_child(scene.root_id, id);
+         let id = d.scene.add_node(Box::new(vec_node));
+         d.scene.add_child(scene.root_id, id);
          NodeHandle { director: scene.director.clone(), id }
     });
 
@@ -758,8 +758,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let mut img_node = ImageNode::new(bytes);
          parse_layout_style(&props, &mut img_node.style);
 
-         let id = d.add_node(Box::new(img_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(img_node));
+         d.scene.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
@@ -768,8 +768,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
 
          let vec_node = VectorNode::new(&bytes);
-         let id = d.add_node(Box::new(vec_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(vec_node));
+         d.scene.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
@@ -780,8 +780,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let mut vec_node = VectorNode::new(&bytes);
          parse_layout_style(&props, &mut vec_node.style);
 
-         let id = d.add_node(Box::new(vec_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(vec_node));
+         d.scene.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
@@ -798,8 +798,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          };
 
          let vid_node = VideoNode::new(source, mode);
-         let id = d.add_node(Box::new(vid_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(vid_node));
+         d.scene.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
@@ -818,8 +818,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          let mut vid_node = VideoNode::new(source, mode);
          parse_layout_style(&props, &mut vid_node.style);
 
-         let id = d.add_node(Box::new(vid_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(vid_node));
+         d.scene.add_child(parent.id, id);
          NodeHandle { director: parent.director.clone(), id }
     });
 
@@ -881,8 +881,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
              text_node.shadow = Some(shadow);
          }
 
-         let id = d.add_node(Box::new(text_node));
-         d.add_child(parent.id, id);
+         let id = d.scene.add_node(Box::new(text_node));
+         d.scene.add_child(parent.id, id);
 
          NodeHandle { director: parent.director.clone(), id }
     });
@@ -945,8 +945,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
              text_node.shadow = Some(shadow);
          }
 
-         let id = d.add_node(Box::new(text_node));
-         d.add_child(scene.root_id, id);
+         let id = d.scene.add_node(Box::new(text_node));
+         d.scene.add_child(scene.root_id, id);
 
          NodeHandle { director: scene.director.clone(), id }
     });
@@ -956,7 +956,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          if Arc::ptr_eq(&scene.director, &comp_def.director) {
              eprintln!("Error: Cycle detected. A composition cannot contain itself.");
              let mut d = scene.director.lock().unwrap();
-             let id = d.add_node(Box::new(BoxNode::new()));
+             let id = d.scene.add_node(Box::new(BoxNode::new()));
              return NodeHandle { director: scene.director.clone(), id };
          }
 
@@ -976,8 +976,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          };
 
          let mut d = scene.director.lock().unwrap();
-         let id = d.add_node(Box::new(comp_node));
-         d.add_child(scene.root_id, id);
+         let id = d.scene.add_node(Box::new(comp_node));
+         d.scene.add_child(scene.root_id, id);
 
          NodeHandle { director: scene.director.clone(), id }
     });
@@ -987,7 +987,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          if Arc::ptr_eq(&scene.director, &comp_def.director) {
              eprintln!("Error: Cycle detected. A composition cannot contain itself.");
              let mut d = scene.director.lock().unwrap();
-             let id = d.add_node(Box::new(BoxNode::new()));
+             let id = d.scene.add_node(Box::new(BoxNode::new()));
              return NodeHandle { director: scene.director.clone(), id };
          }
 
@@ -1010,8 +1010,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
          };
 
          let mut d = scene.director.lock().unwrap();
-         let id = d.add_node(Box::new(comp_node));
-         d.add_child(scene.root_id, id);
+         let id = d.scene.add_node(Box::new(comp_node));
+         d.scene.add_child(scene.root_id, id);
 
          NodeHandle { director: scene.director.clone(), id }
     });
@@ -1019,7 +1019,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
     engine.register_fn("set_content", |node: &mut NodeHandle, content: rhai::Dynamic| {
          let spans = parse_spans_from_dynamic(content);
          let mut d = node.director.lock().unwrap();
-         if let Some(n) = d.get_node_mut(node.id) {
+         if let Some(n) = d.scene.get_node_mut(node.id) {
              n.element.set_rich_text(spans);
              // Trigger layout dirty flag? TextNode handles it in set_rich_text
          }
@@ -1027,7 +1027,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("set_style", |node: &mut NodeHandle, style: rhai::Map| {
          let mut d = node.director.lock().unwrap();
-         if let Some(n) = d.get_node_mut(node.id) {
+         if let Some(n) = d.scene.get_node_mut(node.id) {
              let mut layout_style = n.element.layout_style();
              parse_layout_style(&style, &mut layout_style);
              n.element.set_layout_style(layout_style);
@@ -1043,7 +1043,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("set_pivot", |node: &mut NodeHandle, x: f64, y: f64| {
          let mut d = node.director.lock().unwrap();
-         if let Some(n) = d.get_node_mut(node.id) {
+         if let Some(n) = d.scene.get_node_mut(node.id) {
              n.transform.pivot_x = x as f32;
              n.transform.pivot_y = y as f32;
          }
@@ -1053,7 +1053,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
         let mut d = node.director.lock().unwrap();
 
         // 1. Get the mask node's current parent
-        let old_parent = if let Some(m_node) = d.get_node(mask.id) {
+        let old_parent = if let Some(m_node) = d.scene.get_node(mask.id) {
             m_node.parent
         } else {
             None
@@ -1061,16 +1061,16 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
         // 2. Remove mask from old parent's children list
         if let Some(p_id) = old_parent {
-            d.remove_child(p_id, mask.id);
+            d.scene.remove_child(p_id, mask.id);
         }
 
         // 3. Set mask's parent to the new owner (node.id)
-        if let Some(m_node) = d.get_node_mut(mask.id) {
+        if let Some(m_node) = d.scene.get_node_mut(mask.id) {
             m_node.parent = Some(node.id);
         }
 
         // 4. Assign mask_node to owner
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
             n.mask_node = Some(mask.id);
         }
     });
@@ -1109,14 +1109,14 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
              "luminosity" => skia_safe::BlendMode::Luminosity,
              _ => skia_safe::BlendMode::SrcOver,
          };
-         if let Some(n) = d.get_node_mut(node.id) {
+         if let Some(n) = d.scene.get_node_mut(node.id) {
              n.blend_mode = mode;
          }
     });
 
     engine.register_fn("add_animator", |node: &mut NodeHandle, start_idx: i64, end_idx: i64, prop: &str, start: f64, end: f64, dur: f64, ease: &str| {
         let mut d = node.director.lock().unwrap();
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
              n.element.add_text_animator(
                  start_idx as usize,
                  end_idx as usize,
@@ -1131,7 +1131,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("animate", |node: &mut NodeHandle, prop: &str, start: f64, end: f64, dur: f64, ease: &str| {
         let mut d = node.director.lock().unwrap();
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
              let ease_fn = match ease {
                  "linear" => EasingType::Linear,
                  "ease_in" => EasingType::EaseIn,
@@ -1163,7 +1163,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
     // New animate for Vectors
     engine.register_fn("animate", |node: &mut NodeHandle, prop: &str, start: Vec<rhai::Dynamic>, end: Vec<rhai::Dynamic>, dur: f64, ease: &str| {
         let mut d = node.director.lock().unwrap();
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
              let ease_fn = match ease {
                  "linear" => EasingType::Linear,
                  "ease_in" => EasingType::EaseIn,
@@ -1199,7 +1199,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
         let mut d = node.director.lock().unwrap();
         let spring_conf = parse_spring_config(&config);
 
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
              match prop {
                  "scale" => {
                      n.transform.scale_x.add_spring(end as f32, spring_conf);
@@ -1223,7 +1223,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
         let mut d = node.director.lock().unwrap();
         let spring_conf = parse_spring_config(&config);
 
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
              match prop {
                  "scale" => {
                      n.transform.scale_x.add_spring_with_start(start as f32, end as f32, spring_conf);
@@ -1245,7 +1245,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("path_animate", |node: &mut NodeHandle, svg: &str, dur: f64, ease: &str| {
         let mut d = node.director.lock().unwrap();
-        if let Some(n) = d.get_node_mut(node.id) {
+        if let Some(n) = d.scene.get_node_mut(node.id) {
              // Try to parse SVG path
              if let Some(path) = Path::from_svg(svg) {
                  let ease_fn = match ease {
@@ -1270,7 +1270,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("set_blur", |node: &mut NodeHandle, val: f64| {
          let mut d = node.director.lock().unwrap();
-         if let Some(n) = d.get_node_mut(node.id) {
+         if let Some(n) = d.scene.get_node_mut(node.id) {
              n.element.animate_property("blur", val as f32, val as f32, 0.0, "linear");
          }
     });

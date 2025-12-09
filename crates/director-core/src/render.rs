@@ -234,7 +234,7 @@ pub fn render_export(director: &mut Director, out_path: PathBuf, gpu_context: Op
 ///
 /// Handles transformation stack, blending modes, and masking.
 pub fn render_recursive(director: &Director, node_id: NodeId, canvas: &skia_safe::Canvas, parent_opacity: f32) {
-    if let Some(node) = director.get_node(node_id) {
+    if let Some(node) = director.scene.get_node(node_id) {
          canvas.save();
 
          // Layout Position
