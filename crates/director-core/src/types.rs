@@ -4,6 +4,28 @@ use keyframe::CanTween;
 use keyframe::num_traits::Float;
 use serde::{Serialize, Deserialize};
 
+/// Specifies how the content of a replaceable element (img, video) should
+/// be resized to fit its container.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum ObjectFit {
+    /// The content is sized to maintain its aspect ratio while filling the element's entire content box.
+    /// If the object's aspect ratio does not match the aspect ratio of its box, then the object will be clipped to fit.
+    Cover,
+    /// The content is scaled to maintain its aspect ratio while fitting within the element's content box.
+    /// The entire object is made to fill the box, while preserving its aspect ratio, so the object will be "letterboxed"
+    /// if its aspect ratio does not match the aspect ratio of the box.
+    Contain,
+    /// The content is sized to fill the element's content box. The entire object will completely fill the box.
+    /// If the object's aspect ratio does not match the aspect ratio of its box, then the object will be stretched to fit.
+    Fill,
+}
+
+impl Default for ObjectFit {
+    fn default() -> Self {
+        Self::Cover
+    }
+}
+
 // --- From director.rs ---
 
 /// A unique identifier for a node in the scene graph.

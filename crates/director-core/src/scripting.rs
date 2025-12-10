@@ -6,7 +6,7 @@ use crate::node::{
     TextNode, VectorNode, VideoNode, VideoSource,
 };
 use crate::tokens::DesignSystem;
-use crate::types::{Color, GradientConfig, NodeId, PathAnimationState};
+use crate::types::{Color, GradientConfig, NodeId, ObjectFit, PathAnimationState};
 use crate::video_wrapper::RenderMode;
 use crate::AssetLoader;
 use rhai::{Engine, Map, Module};
@@ -400,6 +400,15 @@ fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
             top: m,
             bottom: m,
         };
+    }
+}
+
+fn parse_object_fit(val: &str) -> Option<ObjectFit> {
+    match val {
+        "cover" => Some(ObjectFit::Cover),
+        "contain" => Some(ObjectFit::Contain),
+        "fill" => Some(ObjectFit::Fill),
+        _ => None,
     }
 }
 
@@ -935,6 +944,15 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
             let mut img_node = ImageNode::new(bytes);
             parse_layout_style(&props, &mut img_node.style);
 
+            if let Some(fit_str) = props
+                .get("object_fit")
+                .and_then(|v| v.clone().into_string().ok())
+            {
+                if let Some(fit) = parse_object_fit(&fit_str) {
+                    img_node.object_fit = fit;
+                }
+            }
+
             let id = d.scene.add_node(Box::new(img_node));
             d.scene.add_child(parent.id, id);
             NodeHandle {
@@ -1012,6 +1030,15 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
             let mut vid_node = VideoNode::new(source, mode);
             parse_layout_style(&props, &mut vid_node.style);
+
+            if let Some(fit_str) = props
+                .get("object_fit")
+                .and_then(|v| v.clone().into_string().ok())
+            {
+                if let Some(fit) = parse_object_fit(&fit_str) {
+                    vid_node.object_fit = fit;
+                }
+            }
 
             let id = d.scene.add_node(Box::new(vid_node));
             d.scene.add_child(parent.id, id);
@@ -1325,11 +1352,28 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
             n.element.set_layout_style(layout_style);
             n.dirty_style = true;
 
+            // Handle Text
             n.element.modify_text_spans(&|spans| {
                 for span in spans {
                     parse_text_style(&style, span);
                 }
             });
+
+            // Handle Media (Image/Video) ObjectFit
+            if let Some(fit_str) = style
+                .get("object_fit")
+                .and_then(|v| v.clone().into_string().ok())
+            {
+                if let Some(fit) = parse_object_fit(&fit_str) {
+                    if let Some(img_node) = n.element.as_any_mut().downcast_mut::<ImageNode>() {
+                        img_node.object_fit = fit;
+                    } else if let Some(vid_node) =
+                        n.element.as_any_mut().downcast_mut::<VideoNode>()
+                    {
+                        vid_node.object_fit = fit;
+                    }
+                }
+            }
         }
     });
 

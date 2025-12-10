@@ -3,7 +3,7 @@ use crate::director::Director;
 use crate::element::{Element, TextFit, TextShadow, TextSpan};
 use crate::systems::layout::LayoutEngine;
 use crate::systems::renderer::render_recursive;
-use crate::types::Color;
+use crate::types::{Color, ObjectFit};
 use cosmic_text::{
     fontdb::Source, Attrs, AttrsList, Buffer, Family, FontSystem, Metrics, Shaping,
     Style as CosmicStyle, SwashCache, Weight,
@@ -49,6 +49,48 @@ fn parse_easing(e: &str) -> EasingType {
         "ease_in_out" => EasingType::EaseInOut,
         "bounce_out" => EasingType::BounceOut,
         _ => EasingType::Linear,
+    }
+}
+
+fn calculate_object_fit_rect(
+    src_w: f32,
+    src_h: f32,
+    dst_rect: Rect,
+    fit: ObjectFit,
+) -> Rect {
+    match fit {
+        ObjectFit::Fill => dst_rect,
+        ObjectFit::Contain | ObjectFit::Cover => {
+            let src_ratio = src_w / src_h;
+            let dst_w = dst_rect.width();
+            let dst_h = dst_rect.height();
+            let dst_ratio = dst_w / dst_h;
+
+            let scale = match fit {
+                ObjectFit::Contain => {
+                    if src_ratio > dst_ratio {
+                        dst_w / src_w
+                    } else {
+                        dst_h / src_h
+                    }
+                }
+                ObjectFit::Cover => {
+                    if src_ratio > dst_ratio {
+                        dst_h / src_h
+                    } else {
+                        dst_w / src_w
+                    }
+                }
+                _ => 1.0,
+            };
+
+            let new_w = src_w * scale;
+            let new_h = src_h * scale;
+            let new_x = dst_rect.left + (dst_w - new_w) / 2.0;
+            let new_y = dst_rect.top + (dst_h - new_h) / 2.0;
+
+            Rect::from_xywh(new_x, new_y, new_w, new_h)
+        }
     }
 }
 
@@ -1374,6 +1416,7 @@ pub struct ImageNode {
     pub image: Option<Image>,
     pub opacity: Animated<f32>,
     pub style: Style,
+    pub object_fit: ObjectFit,
 }
 
 impl ImageNode {
@@ -1383,6 +1426,7 @@ impl ImageNode {
             image,
             opacity: Animated::new(1.0),
             style: Style::DEFAULT,
+            object_fit: ObjectFit::Cover,
         }
     }
 }
@@ -1424,7 +1468,22 @@ impl Element for ImageNode {
                 skia_safe::FilterMode::Linear,
                 skia_safe::MipmapMode::Linear,
             );
-            canvas.draw_image_rect_with_sampling_options(img, None, rect, sampling, &paint);
+
+            let draw_rect = calculate_object_fit_rect(
+                img.width() as f32,
+                img.height() as f32,
+                rect,
+                self.object_fit,
+            );
+
+            canvas.save();
+            if self.object_fit == ObjectFit::Cover {
+                canvas.clip_rect(rect, ClipOp::Intersect, true);
+            }
+            canvas.draw_image_rect_with_sampling_options(
+                img, None, draw_rect, sampling, &paint,
+            );
+            canvas.restore();
         }
         draw_children(canvas);
     }
@@ -1468,6 +1527,7 @@ impl Element for ImageNode {
 pub struct VideoNode {
     pub opacity: Animated<f32>,
     pub style: Style,
+    pub object_fit: ObjectFit,
     current_frame: Mutex<Option<(f64, Image)>>,
 
     decoder: Option<AsyncDecoder>,
@@ -1492,6 +1552,7 @@ impl Clone for VideoNode {
         Self {
             opacity: self.opacity.clone(),
             style: self.style.clone(),
+            object_fit: self.object_fit,
             current_frame: Mutex::new(None),
             decoder,
             render_mode: self.render_mode,
@@ -1518,6 +1579,7 @@ impl VideoNode {
         Self {
             opacity: Animated::new(1.0),
             style: Style::DEFAULT,
+            object_fit: ObjectFit::Cover,
             current_frame: Mutex::new(None),
             decoder,
             render_mode: mode,
@@ -1595,7 +1657,20 @@ impl Element for VideoNode {
         let current = self.current_frame.lock().unwrap();
         if let Some((_, img)) = current.as_ref() {
             let paint = Paint::new(Color4f::new(1.0, 1.0, 1.0, op), None);
-            canvas.draw_image_rect(img, None, rect, &paint);
+
+            let draw_rect = calculate_object_fit_rect(
+                img.width() as f32,
+                img.height() as f32,
+                rect,
+                self.object_fit,
+            );
+
+            canvas.save();
+            if self.object_fit == ObjectFit::Cover {
+                canvas.clip_rect(rect, ClipOp::Intersect, true);
+            }
+            canvas.draw_image_rect(img, None, draw_rect, &paint);
+            canvas.restore();
         } else {
             let mut p = Paint::new(Color4f::new(0.0, 0.0, 1.0, 1.0), None);
             p.set_alpha_f(op);
