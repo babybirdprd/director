@@ -1336,12 +1336,7 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                 inner_director.assets = parent.assets.clone();
             }
 
-            let comp_node = CompositionNode {
-                internal_director: Mutex::new(inner_director),
-                start_offset: 0.0,
-                surface_cache: Mutex::new(None),
-                style: Style::default(),
-            };
+            let comp_node = CompositionNode::new(inner_director);
 
             let mut d = scene.director.lock().unwrap();
             let id = d.scene.add_node(Box::new(comp_node));
@@ -1376,15 +1371,8 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                 inner_director.assets = parent.assets.clone();
             }
 
-            let mut style = Style::default();
-            parse_layout_style(&props, &mut style);
-
-            let comp_node = CompositionNode {
-                internal_director: Mutex::new(inner_director),
-                start_offset: 0.0,
-                surface_cache: Mutex::new(None),
-                style,
-            };
+            let mut comp_node = CompositionNode::new(inner_director);
+            parse_layout_style(&props, &mut comp_node.style);
 
             let mut d = scene.director.lock().unwrap();
             let id = d.scene.add_node(Box::new(comp_node));
