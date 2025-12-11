@@ -2,3 +2,4 @@ target/
 assets/
 !ultimate_showcase.mp4
 .env
+repomix-output.xml
