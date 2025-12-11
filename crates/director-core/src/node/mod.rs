@@ -19,7 +19,7 @@ use std::fmt;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use taffy::style::Style;
+use taffy::style::{AlignItems, FlexDirection, JustifyContent, Style};
 use tempfile::NamedTempFile;
 
 // Video imports
@@ -387,8 +387,14 @@ pub struct BoxNode {
 
 impl BoxNode {
     pub fn new() -> Self {
+        let mut style = Style::default();
+        // Defaults to "Vertical Stack, Centered"
+        style.flex_direction = FlexDirection::Column;
+        style.align_items = Some(AlignItems::Center);
+        style.justify_content = Some(JustifyContent::Center);
+
         Self {
-            style: Style::default(),
+            style,
             bg_color: None,
             opacity: Animated::new(1.0),
             blur: Animated::new(0.0),
@@ -910,6 +916,23 @@ pub struct CompositionNode {
     pub start_offset: f64,
     pub surface_cache: Mutex<Option<Surface>>,
     pub style: Style,
+}
+
+impl CompositionNode {
+    pub fn new(internal_director: Director) -> Self {
+        let mut style = Style::default();
+        // Defaults to "Vertical Stack, Centered"
+        style.flex_direction = FlexDirection::Column;
+        style.align_items = Some(AlignItems::Center);
+        style.justify_content = Some(JustifyContent::Center);
+
+        Self {
+            internal_director: Mutex::new(internal_director),
+            start_offset: 0.0,
+            surface_cache: Mutex::new(None),
+            style,
+        }
+    }
 }
 
 impl Clone for CompositionNode {
