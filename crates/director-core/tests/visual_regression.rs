@@ -7,6 +7,34 @@ use std::path::PathBuf;
 use std::env;
 use std::fs;
 use taffy::style::Dimension;
+use image::{GenericImageView, Rgba};
+
+/// Helper function to save a difference map between two images.
+fn save_diff_image(reference: &image::RgbaImage, actual: &image::RgbaImage, path: &PathBuf) {
+    let width = reference.width();
+    let height = reference.height();
+
+    let mut diff_img = image::RgbaImage::new(width, height);
+
+    for x in 0..width {
+        for y in 0..height {
+            let p1 = reference.get_pixel(x, y);
+            let p2 = actual.get_pixel(x, y);
+
+            if p1 != p2 {
+                // Mismatch: Magenta (Full Opacity)
+                diff_img.put_pixel(x, y, Rgba([255, 0, 255, 255]));
+            } else {
+                // Match: Ghost (Dimmed Original)
+                let mut dim = *p1;
+                dim.0[3] = 64; // ~25% Alpha
+                diff_img.put_pixel(x, y, dim);
+            }
+        }
+    }
+
+    diff_img.save(path).expect("Failed to save diff image");
+}
 
 /// Helper function to perform visual regression testing.
 pub fn assert_frame_match(director: &mut Director, time: f64, snapshot_name: &str) {
@@ -35,7 +63,7 @@ pub fn assert_frame_match(director: &mut Director, time: f64, snapshot_name: &st
 
     // Paths
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-    let snapshot_dir = PathBuf::from(manifest_dir).join("tests/snapshots");
+    let snapshot_dir = PathBuf::from(manifest_dir.clone()).join("tests/snapshots");
     let snapshot_path = snapshot_dir.join(format!("{}.png", snapshot_name));
 
     // 4. Handle Snapshot Update
@@ -86,19 +114,24 @@ pub fn assert_frame_match(director: &mut Director, time: f64, snapshot_name: &st
 
     // 8. Handle Failure
     if diff_percent > 0.1 {
-        let fail_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/visual_regression_failures");
+        let fail_dir = PathBuf::from(manifest_dir).join("target/visual_regression_failures");
         if !fail_dir.exists() {
             fs::create_dir_all(&fail_dir).ok();
         }
 
         let actual_path = fail_dir.join(format!("{}_actual.png", snapshot_name));
+        let diff_path = fail_dir.join(format!("{}_diff.png", snapshot_name));
 
         fs::write(&actual_path, rendered_bytes).expect("Failed to save failure artifact");
 
+        // Generate Diff Map
+        save_diff_image(&reference_img, &rendered_img, &diff_path);
+
         panic!(
-            "Visual regression failed! Image differed by {:.4}%. Artifact saved to {:?}",
+            "Visual regression failed! Image differed by {:.4}%. \nArtifacts:\n  Actual: {:?}\n  Diff:   {:?}",
             diff_percent,
-            actual_path
+            actual_path,
+            diff_path
         );
     }
 }
@@ -156,41 +189,6 @@ fn test_visual_basic_box() {
         box_node.style.size.height = Dimension::length(100.0);
         box_node.style.margin.left = taffy::style::LengthPercentageAuto::length(50.0);
         box_node.style.margin.top = taffy::style::LengthPercentageAuto::length(50.0);
-
-        // Explicitly set color to Blue to override default
-        // box_node.bg_color = Some(director_core::animation::Animated::new(director_core::types::Color::new(0.0, 0.0, 1.0, 1.0)));
-        // WAIT! The Verification Step says: "temporarily change the default background color to Red".
-        // If I explicitly set Blue here, the default Red (from my hack) won't matter unless I am testing the DEFAULT behavior.
-        // My test setup:
-        //   scene_handle.add_box(rhai::Map::from_iter([
-        //       ("color".into(), "#0000FF".into()), // Blue
-        //   ]...
-        // This explicitly sets Blue.
-
-        // The Verification Step says:
-        // "Run UPDATE_SNAPSHOTS=1... This should create a new PNG..." (Snapshot will have Blue box)
-        // "Open src/node/box_node.rs and temporarily change the default background color to Red."
-        // "Run cargo test... The test MUST FAIL..."
-
-        // Why would it fail if I explicitly set Blue in the test?
-        // Ah, `add_box` creates a `BoxNode::new()`.
-        // If `BoxNode::new()` sets Red, and then I set Blue, it should be Blue.
-        // UNLESS the red leaks through? No.
-        // OR the user meant "Don't set a color in the test, rely on default, then change default".
-        // BUT the prompt says: "Run UPDATE_SNAPSHOTS=1... Run test... Success Condition: The test MUST FAIL".
-
-        // Maybe the user expects the Background of the ROOT node (which uses default BoxNode) to be red?
-        // My test setup:
-        // root_node = BoxNode::new(); (This will be RED)
-        // content_node = BoxNode::new() + Blue;
-
-        // Snapshot 1 (Clean): Root is Transparent (default), Content is Blue.
-        // Change Default to Red.
-        // Snapshot 2 (Dirty): Root is Red, Content is Blue.
-        // Comparison: Transparent vs Red background -> FAILURE.
-
-        // So yes, it should fail because the Root node will become Red.
-        // I don't need to change the content node color logic.
 
         box_node.bg_color = Some(director_core::animation::Animated::new(director_core::types::Color::new(0.0, 0.0, 1.0, 1.0)));
 
