@@ -79,6 +79,9 @@ fn test_layout_structure_stability() {
         };
         root_node.style.display = taffy::style::Display::Flex;
         root_node.style.flex_direction = taffy::style::FlexDirection::Column;
+        // Center content to verify complex layout calculations (margin distribution)
+        root_node.style.justify_content = Some(taffy::style::JustifyContent::Center);
+        root_node.style.align_items = Some(taffy::style::AlignItems::Center);
 
         let root_id = d.scene.add_node(Box::new(root_node));
 
