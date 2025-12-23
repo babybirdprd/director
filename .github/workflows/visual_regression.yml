@@ -1,0 +1,60 @@
+name: Visual Regression
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  visual-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        # Install FFmpeg dependencies (for video-rs) and Clang/LLVM (for skia-safe)
+        sudo apt-get install -y \
+          libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev libavdevice-dev \
+          clang libclang-dev llvm-dev \
+          libasound2-dev pkg-config build-essential \
+          libfreetype6-dev libfontconfig1-dev
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run Visual Tests
+      run: |
+        # Ensure bundled fonts are downloaded if setup script exists or manually via test setup
+        # Our tests run setup_test_director which tries to load bundled fonts.
+        # But we need to make sure `assets/fonts/Roboto-Regular.ttf` exists.
+        # It's in the repo if we committed it, OR we need to download it in CI.
+        # Since we added it to `assets/` in previous steps but did not check if we committed it.
+        # The user instructions were to "configure the test harness to load... from assets/".
+        # We downloaded it in the sandbox. If we didn't commit it, CI will fail.
+        # I will assume I need to download it in CI or check if I committed it.
+        # I did not explicitly add `assets/` to git in my `submit` call?
+        # `submit` commits "current code". I should check if `assets/` is ignored.
+        # If `assets/` is ignored, I need a step in CI to download it.
+        # The memory says "Large binary assets... are managed via a setup_assets.sh script that downloads them... to prevent repository bloat."
+        # So I should run `setup_assets.sh` if it exists, or replicate the download.
+
+        mkdir -p assets/fonts
+        curl -o assets/fonts/Roboto-Regular.ttf https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Regular.ttf
+
+        # Run the tests
+        cd crates/director-core
+        cargo test --test visual_suite --no-default-features --features mock_video
+
+    - name: Upload Failures
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: visual-failures
+        path: crates/director-core/target/visual_regression_failures/
