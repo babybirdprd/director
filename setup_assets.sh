@@ -7,8 +7,11 @@ echo "⬇️ Downloading Assets..."
 
 # 1. Fonts
 echo "  - Fetching Fonts..."
+mkdir -p assets/fonts
 curl -L -o assets/Inter-Bold.ttf "https://github.com/google/fonts/raw/main/ofl/inter/Inter-Bold.ttf"
 curl -L -o assets/JetBrainsMono-Bold.ttf "https://github.com/google/fonts/raw/main/ofl/jetbrainsmono/JetBrainsMono-Bold.ttf"
+# Roboto is required for visual regression tests
+curl -L -o assets/fonts/Roboto-Regular.ttf "https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Regular.ttf"
 
 # 2. Images (Abstract Tech)
 echo "  - Fetching Images..."

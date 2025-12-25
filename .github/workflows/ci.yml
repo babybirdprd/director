@@ -1,0 +1,54 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev libavdevice-dev \
+          clang libclang-dev llvm-dev \
+          libasound2-dev pkg-config build-essential \
+          libfreetype6-dev libfontconfig1-dev
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy, rustfmt
+
+    - name: Cache cargo registry and build artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Setup Assets
+      run: bash setup_assets.sh
+
+    - name: Check Formatting
+      run: cargo fmt -- --check
+
+    - name: Lint (Clippy)
+      run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+    - name: Run Tests
+      run: cargo test --workspace --all-features
