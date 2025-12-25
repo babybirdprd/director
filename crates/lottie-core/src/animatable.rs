@@ -352,8 +352,8 @@ impl Animator {
         frame: f32,
         converter: impl Fn(&T) -> U,
         default: U,
-        evaluator: Option<&mut ExpressionEvaluator>,
-        _frame_rate: f32,
+        #[allow(unused_variables)] evaluator: Option<&mut ExpressionEvaluator>,
+        #[allow(unused_variables)] frame_rate: f32,
     ) -> U
     where
         U: Interpolatable + 'static + ToJsValue,
