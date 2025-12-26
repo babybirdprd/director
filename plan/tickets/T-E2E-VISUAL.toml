@@ -1,0 +1,18 @@
+
+[meta]
+id = "T-E2E-VISUAL"
+title = "Visual Test Ticket"
+status = "review"
+priority = "high"
+type = "bug"
+owner = "user"
+created_at = 2024-01-01T00:00:00Z
+
+[spec]
+description = "Visual Check"
+constraints = []
+relevant_files = []
+
+[verification]
+command = "echo pass"
+golden_image = "assets/golden.png"

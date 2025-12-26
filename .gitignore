@@ -3,3 +3,13 @@ assets/
 !ultimate_showcase.mp4
 .env
 repomix-output.xml
+
+# Apps
+apps/director-studio/node_modules/
+apps/director-studio/dist/
+apps/director-studio/playwright-report/
+apps/director-studio/test-results/
+
+# Director-plan temp files
+.temp/
+plan/history/

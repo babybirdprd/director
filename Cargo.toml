@@ -5,6 +5,7 @@ members = [
     "crates/director-cli",
     "crates/director-schema",
     "crates/director-pipeline",
+    "crates/director-plan",
     "crates/lottie-core",
     "crates/lottie-data",
     "crates/lottie-skia"

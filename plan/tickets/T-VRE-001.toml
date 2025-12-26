@@ -1,0 +1,31 @@
+[meta]
+id = "T-VRE-001"
+title = "Visual Regression Test Expansion"
+status = "todo"
+priority = "high"
+type = "feature"
+
+[spec]
+description = """
+Expand visual regression test coverage to include:
+- Text rendering (weights, colors, shadows, shrink-to-fit)
+- Effects (blur, grayscale, sepia, invert)
+- Masking and blend modes
+- Scene transitions
+- Transforms and animations
+"""
+constraints = [
+    "Use assert_frame_match infrastructure from visual_regression.rs",
+    "Store snapshots in crates/director-core/tests/snapshots/",
+    "Support UPDATE_SNAPSHOTS=1 for updating baselines"
+]
+relevant_files = [
+    "crates/director-core/tests/visual_regression.rs",
+    "docs/issues/001-visual-regression-expansion.md"
+]
+
+[verification]
+command = "cargo test -p director-core --test visual_regression"
+golden_image = ""
+
+[history]

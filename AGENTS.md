@@ -17,21 +17,42 @@ Instructions for AI agents working with this codebase.
 ## Workspace Structure
 
 ```
-crates/
-├── director-core/       # Main engine (95% of logic)
-│   ├── src/
-│   │   ├── director.rs      # Timeline coordinator
-│   │   ├── scene.rs         # Scene graph (arena storage)
-│   │   ├── scripting.rs     # Rhai API bindings
-│   │   ├── animation.rs     # Keyframe/spring animation
-│   │   ├── node/            # Node implementations
-│   │   └── systems/         # Renderer, Layout, Assets
-│   └── tests/               # Integration tests
-├── director-cli/        # CLI binary
-├── director-schema/     # Schema types
-├── director-pipeline/   # Asset pipeline
-└── lottie-*/            # Lottie animation support
+director/
+├── crates/
+│   ├── director-core/       # Main engine
+│   ├── director-cli/        # CLI binary
+│   ├── director-plan/       # Task management CLI
+│   ├── director-schema/     # Schema types
+│   ├── director-pipeline/   # Asset pipeline
+│   └── lottie-*/            # Lottie animation
+├── apps/
+│   └── director-studio/     # Web dashboard (Vite + React)
+├── plan/
+│   └── tickets/             # TOML task specs
+└── examples/                # Reference Rhai scripts
 ```
+
+---
+
+## Task Management (director-plan)
+
+Use `director-plan` CLI for task tracking:
+
+```bash
+# List active tickets
+cargo run -p director-plan -- list
+
+# Get context for a ticket (for LLM prompting)
+cargo run -p director-plan -- context T-VRE-001
+
+# Run verification
+cargo run -p director-plan -- verify T-VRE-001
+
+# Update ticket status
+cargo run -p director-plan -- update T-VRE-001 --status in_progress
+```
+
+Tickets are stored in `plan/tickets/*.toml`.
 
 ---
 

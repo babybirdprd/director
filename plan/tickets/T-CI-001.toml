@@ -1,0 +1,31 @@
+[meta]
+id = "T-CI-001"
+title = "GitHub Actions CI Integration"
+status = "todo"
+priority = "high"
+type = "feature"
+
+[spec]
+description = """
+Set up GitHub Actions CI pipeline:
+- cargo fmt --check
+- cargo clippy
+- cargo test (all crates)
+- Visual regression tests with snapshot caching
+- Build artifacts caching
+"""
+constraints = [
+    "Must work on Ubuntu runners",
+    "Cache Cargo and Skia build artifacts",
+    "FFmpeg must be installed in workflow"
+]
+relevant_files = [
+    ".github/workflows/",
+    "docs/issues/003-ci-integration.md"
+]
+
+[verification]
+command = "cargo test --workspace"
+golden_image = ""
+
+[history]

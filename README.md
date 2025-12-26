@@ -57,21 +57,21 @@ cargo run --release -- examples/basics/hello_world.rhai output.mp4
 ## Project Structure
 
 ```
-director-engine/
+director/
 ├── crates/
 │   ├── director-core/       # Main engine (rendering, scripting, layout)
 │   ├── director-cli/        # Command-line video renderer
+│   ├── director-plan/       # Task management CLI for AI agents
 │   ├── director-pipeline/   # Asset pipeline utilities
 │   ├── director-schema/     # Schema definitions
-│   ├── lottie-core/         # Lottie animation parser
-│   ├── lottie-data/         # Lottie data structures
-│   └── lottie-skia/         # Lottie Skia renderer
-├── examples/
-│   ├── basics/              # Hello world, layout, animation, text
-│   └── features/            # Effects, masking, transitions, images
+│   └── lottie-*/            # Lottie animation support
+├── apps/
+│   └── director-studio/     # Web dashboard (Vite + React)
+├── plan/
+│   └── tickets/             # TOML task specifications
+├── examples/                # Reference Rhai scripts
 ├── docs/                    # Documentation
-├── assets/                  # Test assets (images, fonts, audio, video)
-└── .github/                 # CI/CD and issue templates
+└── assets/                  # Test assets
 ```
 
 ---
@@ -121,6 +121,28 @@ See [docs/BUILD_GUIDE.md](docs/BUILD_GUIDE.md) for detailed setup.
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | How to contribute |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Development milestones |
 | [examples/README.md](examples/README.md) | Example scripts index |
+
+---
+
+## Director Studio (Task Dashboard)
+
+A web-based Kanban board for managing development tasks with AI agents.
+
+```bash
+# Build frontend (once)
+cd apps/director-studio && pnpm install && pnpm build
+
+# Start server
+cargo run -p director-plan -- serve
+# Open http://localhost:3000
+```
+
+CLI commands:
+```bash
+cargo run -p director-plan -- list                    # List tickets
+cargo run -p director-plan -- context T-VRE-001       # Get context for LLM
+cargo run -p director-plan -- verify T-VRE-001        # Run verification
+```
 
 ---
 

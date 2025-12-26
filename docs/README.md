@@ -26,7 +26,7 @@
 |----------|-------------|
 | [V1_RELEASE_CHECKLIST.md](V1_RELEASE_CHECKLIST.md) | V1 milestone tracker |
 | [V2_RELEASE_CHECKLIST.md](V2_RELEASE_CHECKLIST.md) | V2 milestone tracker |
-| [issues/](issues/) | Detailed task specifications |
+| [plan/tickets/](../plan/tickets/) | Task specifications (TOML) |
 
 ## Future Vision
 

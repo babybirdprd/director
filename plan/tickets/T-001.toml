@@ -1,0 +1,20 @@
+[meta]
+id = "T-001"
+title = "Implement Text Shadows"
+status = "review"
+priority = "high"
+owner = "agent-claude"
+type = "feature"
+
+[spec]
+description = """
+The engine needs to support soft drop shadows for text nodes to improve legibility against complex backgrounds.
+"""
+constraints = []
+relevant_files = []
+
+[verification]
+command = "echo 'Test passed' && echo 'Generated artifacts'"
+golden_image = "assets/golden.png"
+
+[history]

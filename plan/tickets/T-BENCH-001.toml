@@ -1,0 +1,30 @@
+[meta]
+id = "T-BENCH-001"
+title = "Benchmark Suite with Criterion"
+status = "todo"
+priority = "medium"
+type = "feature"
+
+[spec]
+description = """
+Create performance benchmark suite:
+- Render time per frame
+- Layout computation time
+- Text layout time
+- Memory usage tracking
+"""
+constraints = [
+    "Use criterion.rs for benchmarks",
+    "Place in crates/director-core/benches/",
+    "Track historical results"
+]
+relevant_files = [
+    "crates/director-core/benches/",
+    "docs/issues/004-benchmark-suite.md"
+]
+
+[verification]
+command = "cargo bench -p director-core"
+golden_image = ""
+
+[history]
