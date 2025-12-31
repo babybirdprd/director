@@ -37,6 +37,14 @@ pub fn parse_easing(e: &str) -> EasingType {
         "ease_out" => EasingType::EaseOut,
         "ease_in_out" => EasingType::EaseInOut,
         "bounce_out" => EasingType::BounceOut,
+        "bounce_in" => EasingType::BounceIn,
+        "bounce_in_out" => EasingType::BounceInOut,
+        "elastic_out" => EasingType::ElasticOut,
+        "elastic_in" => EasingType::ElasticIn,
+        "elastic_in_out" => EasingType::ElasticInOut,
+        "back_out" => EasingType::BackOut,
+        "back_in" => EasingType::BackIn,
+        "back_in_out" => EasingType::BackInOut,
         _ => EasingType::Linear,
     }
 }

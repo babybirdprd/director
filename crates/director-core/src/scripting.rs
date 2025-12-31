@@ -12,13 +12,13 @@ use crate::AssetLoader;
 use rhai::{Engine, Map, Module};
 use skia_safe::Path;
 use std::collections::HashMap;
-use tracing::error;
 use std::sync::{Arc, Mutex};
 use taffy::geometry::Rect;
 use taffy::style::{
     AlignItems, Dimension, FlexDirection, JustifyContent, LengthPercentage, LengthPercentageAuto,
     Style,
 };
+use tracing::error;
 
 /// Wrapper around `Director` for Rhai scripting.
 #[derive(Clone)]
@@ -279,6 +279,8 @@ fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
                 } else {
                     None
                 }
+            } else if let Ok(val) = s.parse::<f32>() {
+                Some(Dimension::length(val))
             } else {
                 None
             }
@@ -355,6 +357,8 @@ fn parse_layout_style(props: &rhai::Map, style: &mut Style) {
                 } else {
                     None
                 }
+            } else if let Ok(val) = s.parse::<f32>() {
+                Some(LengthPercentage::length(val))
             } else {
                 None
             }
@@ -695,6 +699,15 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                     "ease_in" => EasingType::EaseIn,
                     "ease_out" => EasingType::EaseOut,
                     "ease_in_out" => EasingType::EaseInOut,
+                    "bounce_out" => EasingType::BounceOut,
+                    "bounce_in" => EasingType::BounceIn,
+                    "bounce_in_out" => EasingType::BounceInOut,
+                    "elastic_out" => EasingType::ElasticOut,
+                    "elastic_in" => EasingType::ElasticIn,
+                    "elastic_in_out" => EasingType::ElasticInOut,
+                    "back_out" => EasingType::BackOut,
+                    "back_in" => EasingType::BackIn,
+                    "back_in_out" => EasingType::BackInOut,
                     _ => EasingType::Linear,
                 };
 
@@ -1547,6 +1560,14 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                     "ease_out" => EasingType::EaseOut,
                     "ease_in_out" => EasingType::EaseInOut,
                     "bounce_out" => EasingType::BounceOut,
+                    "bounce_in" => EasingType::BounceIn,
+                    "bounce_in_out" => EasingType::BounceInOut,
+                    "elastic_out" => EasingType::ElasticOut,
+                    "elastic_in" => EasingType::ElasticIn,
+                    "elastic_in_out" => EasingType::ElasticInOut,
+                    "back_out" => EasingType::BackOut,
+                    "back_in" => EasingType::BackIn,
+                    "back_in_out" => EasingType::BackInOut,
                     _ => EasingType::Linear,
                 };
 
@@ -1620,6 +1641,14 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                     "ease_out" => EasingType::EaseOut,
                     "ease_in_out" => EasingType::EaseInOut,
                     "bounce_out" => EasingType::BounceOut,
+                    "bounce_in" => EasingType::BounceIn,
+                    "bounce_in_out" => EasingType::BounceInOut,
+                    "elastic_out" => EasingType::ElasticOut,
+                    "elastic_in" => EasingType::ElasticIn,
+                    "elastic_in_out" => EasingType::ElasticInOut,
+                    "back_out" => EasingType::BackOut,
+                    "back_in" => EasingType::BackIn,
+                    "back_in_out" => EasingType::BackInOut,
                     _ => EasingType::Linear,
                 };
 
@@ -1765,6 +1794,15 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                         "ease_in" => EasingType::EaseIn,
                         "ease_out" => EasingType::EaseOut,
                         "ease_in_out" => EasingType::EaseInOut,
+                        "bounce_out" => EasingType::BounceOut,
+                        "bounce_in" => EasingType::BounceIn,
+                        "bounce_in_out" => EasingType::BounceInOut,
+                        "elastic_out" => EasingType::ElasticOut,
+                        "elastic_in" => EasingType::ElasticIn,
+                        "elastic_in_out" => EasingType::ElasticInOut,
+                        "back_out" => EasingType::BackOut,
+                        "back_in" => EasingType::BackIn,
+                        "back_in_out" => EasingType::BackInOut,
                         _ => EasingType::Linear,
                     };
                     let mut progress = Animated::new(0.0);
@@ -1844,6 +1882,15 @@ pub fn register_rhai_api(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
                     "ease_in" => EasingType::EaseIn,
                     "ease_out" => EasingType::EaseOut,
                     "ease_in_out" => EasingType::EaseInOut,
+                    "bounce_out" => EasingType::BounceOut,
+                    "bounce_in" => EasingType::BounceIn,
+                    "bounce_in_out" => EasingType::BounceInOut,
+                    "elastic_out" => EasingType::ElasticOut,
+                    "elastic_in" => EasingType::ElasticIn,
+                    "elastic_in_out" => EasingType::ElasticInOut,
+                    "back_out" => EasingType::BackOut,
+                    "back_in" => EasingType::BackIn,
+                    "back_in_out" => EasingType::BackInOut,
                     _ => EasingType::Linear,
                 };
                 t.volume.add_segment(start as f32, end as f32, dur, ease_fn);
