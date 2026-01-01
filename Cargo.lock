@@ -751,6 +751,7 @@ dependencies = [
  "ndarray",
  "rand 0.8.5",
  "rayon",
+ "realfft",
  "resvg",
  "rhai",
  "rubato",

@@ -15,6 +15,27 @@
 use crate::element::Element;
 use crate::types::{NodeId, PathAnimationState, Transform};
 
+/// Runtime binding of an audio analysis value to a node property.
+///
+/// Enables beat-reactive visuals by mapping frequency band energy to node properties.
+#[derive(Clone, Debug)]
+pub struct AudioBinding {
+    /// Index of the audio track in the mixer
+    pub track_id: usize,
+    /// Frequency band: "bass", "mids", "highs"
+    pub band: String,
+    /// Property to animate: "scale", "opacity", "x", "y", "rotation"
+    pub property: String,
+    /// Minimum output value (when energy is 0)
+    pub min_value: f32,
+    /// Maximum output value (when energy is 1)
+    pub max_value: f32,
+    /// Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)
+    pub smoothing: f32,
+    /// Previous smoothed value for temporal smoothing
+    pub prev_value: f32,
+}
+
 /// A wrapper around an `Element` that adds scene graph relationships and state.
 ///
 /// `SceneNode` encapsulates the specific logic for hierarchy, layout positioning,
@@ -48,6 +69,9 @@ pub struct SceneNode {
     pub z_index: i32,
 
     pub dirty_style: bool,
+
+    /// Audio-reactive bindings for this node
+    pub audio_bindings: Vec<AudioBinding>,
 }
 
 impl SceneNode {
@@ -66,6 +90,7 @@ impl SceneNode {
             blend_mode: skia_safe::BlendMode::SrcOver,
             z_index: 0,
             dirty_style: true,
+            audio_bindings: Vec::new(),
         }
     }
 }

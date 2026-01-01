@@ -1,15 +1,17 @@
 //! # Audio Module
 //!
-//! Audio mixing and playback.
+//! Audio mixing, playback, and spectrum analysis.
 //!
 //! ## Responsibilities
 //! - **Audio Mixing**: Combines multiple `AudioTrack`s into final output.
 //! - **Sync**: Aligns audio with video timeline.
 //! - **Track Management**: Add/remove/seek audio tracks.
+//! - **FFT Analysis**: Compute frequency spectrum for audio-reactive visuals.
 //!
 //! ## Key Types
 //! - `AudioMixer`: The main audio processor.
 //! - `AudioTrack`: A single audio source with volume and timing.
+//! - `AudioAnalyzer`: FFT-based spectrum analyzer for beat detection.
 
 use crate::animation::Animated;
 use anyhow::{Context, Result};
@@ -149,6 +151,171 @@ impl AudioMixer {
         }
 
         output
+    }
+}
+
+// ============================================================================
+// Audio Analyzer (FFT-based spectrum analysis)
+// ============================================================================
+
+use realfft::{RealFftPlanner, RealToComplex};
+use std::f32::consts::PI;
+use std::sync::Arc;
+
+/// FFT-based audio analyzer for spectrum and beat detection.
+///
+/// Provides frequency spectrum analysis for audio-reactive visuals.
+/// Default FFT size is 2048 samples (~43ms at 48kHz).
+#[derive(Clone)]
+pub struct AudioAnalyzer {
+    /// The FFT algorithm instance
+    fft: Arc<dyn RealToComplex<f32>>,
+    /// FFT size (number of samples per analysis window)
+    pub fft_size: usize,
+    /// Sample rate for frequency bin calculations
+    pub sample_rate: u32,
+    /// Pre-computed Hann window coefficients
+    window: Vec<f32>,
+}
+
+impl std::fmt::Debug for AudioAnalyzer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AudioAnalyzer")
+            .field("fft_size", &self.fft_size)
+            .field("sample_rate", &self.sample_rate)
+            .finish()
+    }
+}
+
+impl AudioAnalyzer {
+    /// Creates a new AudioAnalyzer with the specified FFT size and sample rate.
+    ///
+    /// # Arguments
+    /// * `fft_size` - Number of samples per FFT window (power of 2, e.g., 1024, 2048, 4096)
+    /// * `sample_rate` - Audio sample rate in Hz (e.g., 48000)
+    pub fn new(fft_size: usize, sample_rate: u32) -> Self {
+        let mut planner = RealFftPlanner::<f32>::new();
+        let fft = planner.plan_fft_forward(fft_size);
+
+        // Pre-compute Hann window
+        let window: Vec<f32> = (0..fft_size)
+            .map(|i| 0.5 * (1.0 - (2.0 * PI * i as f32 / (fft_size - 1) as f32).cos()))
+            .collect();
+
+        Self {
+            fft,
+            fft_size,
+            sample_rate,
+            window,
+        }
+    }
+
+    /// Computes the frequency spectrum at a given time offset.
+    ///
+    /// # Arguments
+    /// * `samples` - Interleaved stereo audio samples
+    /// * `time` - Time offset in seconds to analyze
+    ///
+    /// # Returns
+    /// Normalized magnitude values for frequency bins (0 to fft_size/2).
+    /// Each bin represents a frequency range of sample_rate/fft_size Hz.
+    pub fn compute_spectrum(&self, samples: &[f32], time: f64) -> Vec<f32> {
+        let frame_count = samples.len() / 2;
+        if frame_count == 0 {
+            return vec![0.0; self.fft_size / 2 + 1];
+        }
+
+        // Calculate sample offset from time
+        let sample_offset = (time * self.sample_rate as f64) as usize;
+        if sample_offset >= frame_count {
+            return vec![0.0; self.fft_size / 2 + 1];
+        }
+
+        // Extract mono samples (average L+R) with windowing
+        let mut input: Vec<f32> = (0..self.fft_size)
+            .map(|i| {
+                let idx = sample_offset + i;
+                if idx < frame_count {
+                    let left = samples[idx * 2];
+                    let right = samples[idx * 2 + 1];
+                    (left + right) * 0.5 * self.window[i]
+                } else {
+                    0.0
+                }
+            })
+            .collect();
+
+        // Allocate output buffer
+        let mut spectrum = self.fft.make_output_vec();
+
+        // Perform FFT
+        if self.fft.process(&mut input, &mut spectrum).is_err() {
+            return vec![0.0; self.fft_size / 2 + 1];
+        }
+
+        // Convert to normalized magnitudes
+        let scale = 2.0 / self.fft_size as f32;
+        spectrum
+            .iter()
+            .map(|c| (c.re * c.re + c.im * c.im).sqrt() * scale)
+            .collect()
+    }
+
+    /// Gets the energy level in a specific frequency band.
+    ///
+    /// # Arguments
+    /// * `samples` - Interleaved stereo audio samples
+    /// * `time` - Time offset in seconds
+    /// * `band` - Frequency band: "bass", "mids", or "highs"
+    ///
+    /// # Returns
+    /// Normalized energy level (0.0 to 1.0)
+    pub fn get_energy(&self, samples: &[f32], time: f64, band: &str) -> f32 {
+        let spectrum = self.compute_spectrum(samples, time);
+        if spectrum.is_empty() {
+            return 0.0;
+        }
+
+        // Frequency bin resolution
+        let bin_hz = self.sample_rate as f32 / self.fft_size as f32;
+
+        // Frequency ranges for each band
+        let (low_freq, high_freq) = match band {
+            "bass" => (20.0, 250.0),
+            "mids" => (250.0, 4000.0),
+            "highs" => (4000.0, 20000.0),
+            _ => (20.0, 20000.0), // Full spectrum
+        };
+
+        // Convert frequencies to bin indices
+        let low_bin = (low_freq / bin_hz).floor() as usize;
+        let high_bin = ((high_freq / bin_hz).ceil() as usize).min(spectrum.len());
+
+        if low_bin >= high_bin {
+            return 0.0;
+        }
+
+        // Sum magnitudes in band
+        let sum: f32 = spectrum[low_bin..high_bin].iter().sum();
+        let avg = sum / (high_bin - low_bin) as f32;
+
+        // Normalize (empirical scaling for typical audio)
+        (avg * 10.0).min(1.0)
+    }
+
+    /// Convenience method: get bass energy (20-250 Hz)
+    pub fn bass(&self, samples: &[f32], time: f64) -> f32 {
+        self.get_energy(samples, time, "bass")
+    }
+
+    /// Convenience method: get mids energy (250-4000 Hz)
+    pub fn mids(&self, samples: &[f32], time: f64) -> f32 {
+        self.get_energy(samples, time, "mids")
+    }
+
+    /// Convenience method: get highs energy (4000-20000 Hz)
+    pub fn highs(&self, samples: &[f32], time: f64) -> f32 {
+        self.get_energy(samples, time, "highs")
     }
 }
 

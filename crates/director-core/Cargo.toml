@@ -20,6 +20,7 @@ symphonia = { version = "0.5.3", features = ["aac", "mp3", "pcm", "wav", "isomp4
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rubato = "0.14"
+realfft = "3.4"
 
 # Lottie Dependencies
 lottie-core = { path = "../lottie-core", version = "0.1.0" }

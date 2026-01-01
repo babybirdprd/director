@@ -14,7 +14,7 @@
 
 // use rayon::prelude::*; // Rayon disabled due to Taffy !Send
 use crate::animation::EasingType;
-use crate::audio::{AudioMixer, AudioTrack};
+use crate::audio::{AudioAnalyzer, AudioMixer, AudioTrack};
 use crate::scene::SceneGraph;
 use crate::systems::assets::AssetManager;
 use crate::types::NodeId;
@@ -96,6 +96,8 @@ pub struct Director {
     pub render_mode: RenderMode,
     /// Audio Mixer state.
     pub audio_mixer: AudioMixer,
+    /// Audio Analyzer for FFT-based spectrum analysis.
+    pub audio_analyzer: AudioAnalyzer,
     /// Shared Asset Manager.
     pub assets: AssetManager,
 }
@@ -159,6 +161,7 @@ impl Director {
             shutter_angle: 180.0,
             render_mode,
             audio_mixer: AudioMixer::new(48000),
+            audio_analyzer: AudioAnalyzer::new(2048, 48000),
             assets,
         }
     }
@@ -321,6 +324,58 @@ impl Director {
                             node.transform.translate_x.current_value,
                             node.local_time
                         );
+                    }
+                }
+            }
+        }
+
+        // Pass 3: Audio Reactive Bindings
+        // Process after animations so audio values take priority
+        for node_opt in self.scene.nodes.iter_mut() {
+            if let Some(node) = node_opt {
+                if (node.last_visit_time - global_time).abs() < 0.0001 {
+                    for binding in &mut node.audio_bindings {
+                        // Get audio samples from the track
+                        let energy = if let Some(Some(track)) =
+                            self.audio_mixer.tracks.get(binding.track_id)
+                        {
+                            self.audio_analyzer.get_energy(
+                                &track.samples,
+                                global_time,
+                                &binding.band,
+                            )
+                        } else {
+                            0.0
+                        };
+
+                        // Map energy (0-1) to output range
+                        let raw_value =
+                            binding.min_value + energy * (binding.max_value - binding.min_value);
+
+                        // Apply temporal smoothing
+                        let smoothed = if binding.smoothing > 0.0 {
+                            binding.prev_value * binding.smoothing
+                                + raw_value * (1.0 - binding.smoothing)
+                        } else {
+                            raw_value
+                        };
+                        binding.prev_value = smoothed;
+
+                        // Apply to property
+                        match binding.property.as_str() {
+                            "scale" => {
+                                node.transform.scale_x.current_value = smoothed;
+                                node.transform.scale_y.current_value = smoothed;
+                            }
+                            "scale_x" => node.transform.scale_x.current_value = smoothed,
+                            "scale_y" => node.transform.scale_y.current_value = smoothed,
+                            "x" => node.transform.translate_x.current_value = smoothed,
+                            "y" => node.transform.translate_y.current_value = smoothed,
+                            "rotation" => node.transform.rotation.current_value = smoothed,
+                            // Note: opacity requires Element trait extension
+                            // "opacity" => node.element.set_opacity(smoothed),
+                            _ => {}
+                        }
                     }
                 }
             }

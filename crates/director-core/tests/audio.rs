@@ -78,3 +78,91 @@ fn audio_resampling_preserves_amplitude() {
         max_amplitude
     );
 }
+
+// ============================================================================
+// FFT / Spectrum Analysis Tests
+// ============================================================================
+
+use director_core::audio::AudioAnalyzer;
+
+/// Test FFT correctly identifies a 440Hz sine wave peak.
+#[test]
+fn audio_fft_sine_wave_peak() {
+    let sample_rate = 48000u32;
+    let fft_size = 2048usize;
+    let freq = 440.0f32;
+
+    // Generate 1 second of 440Hz sine wave (stereo, interleaved)
+    let num_frames = sample_rate as usize;
+    let mut samples: Vec<f32> = Vec::with_capacity(num_frames * 2);
+
+    for i in 0..num_frames {
+        let t = i as f32 / sample_rate as f32;
+        let sample = (2.0 * PI * freq * t).sin();
+        samples.push(sample); // Left
+        samples.push(sample); // Right
+    }
+
+    let analyzer = AudioAnalyzer::new(fft_size, sample_rate);
+    let spectrum = analyzer.compute_spectrum(&samples, 0.0);
+
+    // Find the bin with the maximum magnitude
+    let (peak_bin, peak_mag) = spectrum
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    // Calculate expected bin for 440Hz
+    let bin_hz = sample_rate as f32 / fft_size as f32;
+    let expected_bin = (freq / bin_hz).round() as usize;
+
+    // Peak should be within 2 bins of expected (due to spectral leakage)
+    assert!(
+        (peak_bin as i32 - expected_bin as i32).abs() <= 2,
+        "Peak at bin {} ({}Hz), expected near bin {} ({}Hz)",
+        peak_bin,
+        peak_bin as f32 * bin_hz,
+        expected_bin,
+        freq
+    );
+
+    // Peak magnitude should be significant
+    assert!(
+        *peak_mag > 0.1,
+        "Peak magnitude {} should be significant",
+        peak_mag
+    );
+}
+
+/// Test energy bands correctly separate bass from highs.
+#[test]
+fn audio_energy_bands_separation() {
+    let sample_rate = 48000u32;
+    let fft_size = 2048usize;
+
+    // Generate low frequency (100Hz) bass signal
+    let bass_freq = 100.0f32;
+    let num_frames = fft_size * 2; // Enough samples
+    let mut bass_samples: Vec<f32> = Vec::with_capacity(num_frames * 2);
+
+    for i in 0..num_frames {
+        let t = i as f32 / sample_rate as f32;
+        let sample = (2.0 * PI * bass_freq * t).sin();
+        bass_samples.push(sample);
+        bass_samples.push(sample);
+    }
+
+    let analyzer = AudioAnalyzer::new(fft_size, sample_rate);
+
+    let bass_energy = analyzer.bass(&bass_samples, 0.0);
+    let highs_energy = analyzer.highs(&bass_samples, 0.0);
+
+    // Bass signal should have higher bass energy than highs
+    assert!(
+        bass_energy > highs_energy,
+        "For 100Hz signal: bass ({}) should be > highs ({})",
+        bass_energy,
+        highs_energy
+    );
+}

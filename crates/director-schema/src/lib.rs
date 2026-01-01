@@ -8,6 +8,9 @@ pub struct MovieRequest {
     pub height: u32,
     pub fps: u32,
     pub scenes: Vec<Scene>,
+    /// Global audio tracks for the movie
+    #[serde(default)]
+    pub audio_tracks: Vec<AudioTrack>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -28,6 +31,9 @@ pub struct Node {
     pub transform: TransformMap,
     #[serde(default)]
     pub animations: Vec<Animation>,
+    /// Audio-reactive bindings for this node
+    #[serde(default)]
+    pub audio_bindings: Vec<AudioReactiveBinding>,
 
     // The specific type (Box, Text, Image, Video, Vector, Lottie, Effect)
     #[serde(flatten)]
@@ -196,6 +202,48 @@ pub struct TextAnimator {
     pub easing: EasingType,
 }
 
+/// An audio track in the project.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioTrack {
+    /// Unique identifier for referencing in audio bindings
+    pub id: String,
+    /// Path to audio file
+    pub src: String,
+    /// Start time in seconds (global timeline)
+    #[serde(default)]
+    pub start_time: f64,
+    /// Volume level (0.0 - 1.0)
+    #[serde(default = "default_volume")]
+    pub volume: f32,
+    /// Whether to loop the audio
+    #[serde(default)]
+    pub loop_audio: bool,
+}
+
+fn default_volume() -> f32 {
+    1.0
+}
+
+/// Binds a node property to an audio analysis value.
+///
+/// Enables beat-reactive visuals by mapping frequency band energy to node properties.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioReactiveBinding {
+    /// ID of the audio track to analyze
+    pub audio_id: String,
+    /// Frequency band: "bass", "mids", "highs"
+    pub band: String,
+    /// Property to bind: "scale", "opacity", "y", "x", "rotation"
+    pub property: String,
+    /// Minimum output value (when energy is 0)
+    pub min_value: f32,
+    /// Maximum output value (when energy is 1)
+    pub max_value: f32,
+    /// Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)
+    #[serde(default)]
+    pub smoothing: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,6 +270,7 @@ mod tests {
                     },
                     transform: TransformMap::default(),
                     animations: vec![],
+                    audio_bindings: vec![],
                     children: vec![Node {
                         id: "text_1".to_string(),
                         kind: NodeKind::Text {
@@ -235,10 +284,12 @@ mod tests {
                         },
                         transform: TransformMap::default(),
                         animations: vec![],
+                        audio_bindings: vec![],
                         children: vec![],
                     }],
                 },
             }],
+            audio_tracks: vec![],
         };
 
         let json = serde_json::to_string_pretty(&movie).unwrap();
