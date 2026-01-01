@@ -15,8 +15,8 @@ use std::sync::Arc;
 use taffy::geometry::{Line, Rect, Size};
 use taffy::prelude::*;
 use taffy::style::{
-    AlignItems, Dimension, Display, FlexDirection, GridPlacement, GridTemplateComponent,
-    JustifyContent, LengthPercentage, LengthPercentageAuto, Position, Style,
+    AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap, GridPlacement,
+    GridTemplateComponent, JustifyContent, LengthPercentage, LengthPercentageAuto, Position, Style,
 };
 
 /// Converts a Schema Request into a runnable Director instance.
@@ -241,6 +241,39 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
             }
         }
 
+        // Apply BoxNode-specific properties (border, shadow, overflow)
+        if let Some(box_node) = node.element.as_any_mut().downcast_mut::<BoxNode>() {
+            // Border
+            if let Some(bw) = node_def.style.border_width {
+                box_node.border_width = Animated::new(bw);
+            }
+            if let Some(bc) = node_def.style.border_color {
+                box_node.border_color = Some(Animated::new(bc));
+            }
+            if let Some(br) = node_def.style.border_radius {
+                box_node.border_radius = Animated::new(br);
+            }
+
+            // Shadow
+            if let Some(sc) = node_def.style.shadow_color {
+                box_node.shadow_color = Some(Animated::new(sc));
+            }
+            if let Some(sb) = node_def.style.shadow_blur {
+                box_node.shadow_blur = Animated::new(sb);
+            }
+            if let Some(sx) = node_def.style.shadow_x {
+                box_node.shadow_offset_x = Animated::new(sx);
+            }
+            if let Some(sy) = node_def.style.shadow_y {
+                box_node.shadow_offset_y = Animated::new(sy);
+            }
+
+            // Overflow
+            if let Some(o) = &node_def.style.overflow {
+                box_node.overflow = o.clone();
+            }
+        }
+
         // Apply Transform
         apply_transform_map(&mut node.transform, &node_def.transform);
 
@@ -282,6 +315,27 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
         style.size.height = parse_dim(h);
     }
 
+    // Size constraints
+    if let Some(v) = &map.min_width {
+        style.min_size.width = parse_dim(v);
+    }
+    if let Some(v) = &map.max_width {
+        style.max_size.width = parse_dim(v);
+    }
+    if let Some(v) = &map.min_height {
+        style.min_size.height = parse_dim(v);
+    }
+    if let Some(v) = &map.max_height {
+        style.max_size.height = parse_dim(v);
+    }
+
+    // Aspect ratio
+    if let Some(ar) = &map.aspect_ratio {
+        if let Some(ratio) = parse_aspect_ratio(ar) {
+            style.aspect_ratio = Some(ratio);
+        }
+    }
+
     // Display mode
     if let Some(d) = &map.display {
         style.display = match d.as_str() {
@@ -300,7 +354,7 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
         };
     }
 
-    // Flexbox
+    // Flexbox (container)
     if let Some(d) = &map.flex_direction {
         style.flex_direction = match d.as_str() {
             "column" => FlexDirection::Column,
@@ -326,6 +380,30 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
         };
     }
 
+    if let Some(w) = &map.flex_wrap {
+        style.flex_wrap = match w.as_str() {
+            "wrap" => FlexWrap::Wrap,
+            _ => FlexWrap::NoWrap,
+        };
+    }
+
+    // Flexbox (item)
+    if let Some(g) = map.flex_grow {
+        style.flex_grow = g;
+    }
+    if let Some(s) = map.flex_shrink {
+        style.flex_shrink = s;
+    }
+    if let Some(a) = &map.align_self {
+        style.align_self = match a.as_str() {
+            "center" => Some(AlignSelf::Center),
+            "stretch" => Some(AlignSelf::Stretch),
+            "flex_end" => Some(AlignSelf::FlexEnd),
+            "flex_start" => Some(AlignSelf::FlexStart),
+            _ => None,
+        };
+    }
+
     // Grid templates
     if let Some(cols) = &map.grid_template_columns {
         style.grid_template_columns = cols.iter().map(|s| parse_track_sizing_str(s)).collect();
@@ -342,7 +420,7 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
         style.grid_column = parse_grid_line_str(s);
     }
 
-    // Padding
+    // Padding (uniform)
     if let Some(p) = map.padding {
         let d = LengthPercentage::length(p);
         style.padding = Rect {
@@ -353,7 +431,21 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
         };
     }
 
-    // Margin
+    // Padding (per-side overrides)
+    if let Some(v) = map.padding_top {
+        style.padding.top = LengthPercentage::length(v);
+    }
+    if let Some(v) = map.padding_right {
+        style.padding.right = LengthPercentage::length(v);
+    }
+    if let Some(v) = map.padding_bottom {
+        style.padding.bottom = LengthPercentage::length(v);
+    }
+    if let Some(v) = map.padding_left {
+        style.padding.left = LengthPercentage::length(v);
+    }
+
+    // Margin (uniform)
     if let Some(m) = map.margin {
         let d = LengthPercentageAuto::length(m);
         style.margin = Rect {
@@ -362,6 +454,20 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
             top: d,
             bottom: d,
         };
+    }
+
+    // Margin (per-side overrides)
+    if let Some(v) = map.margin_top {
+        style.margin.top = LengthPercentageAuto::length(v);
+    }
+    if let Some(v) = map.margin_right {
+        style.margin.right = LengthPercentageAuto::length(v);
+    }
+    if let Some(v) = map.margin_bottom {
+        style.margin.bottom = LengthPercentageAuto::length(v);
+    }
+    if let Some(v) = map.margin_left {
+        style.margin.left = LengthPercentageAuto::length(v);
     }
 
     // Position mode (absolute/relative)
@@ -384,6 +490,19 @@ fn apply_style_map(style: &mut Style, map: &StyleMap) {
     if let Some(bottom) = map.bottom {
         style.inset.bottom = LengthPercentageAuto::length(bottom);
     }
+}
+
+/// Parses aspect ratio string like "16:9" into a float
+fn parse_aspect_ratio(s: &str) -> Option<f32> {
+    let parts: Vec<&str> = s.split(':').collect();
+    if parts.len() == 2 {
+        let w = parts[0].trim().parse::<f32>().ok()?;
+        let h = parts[1].trim().parse::<f32>().ok()?;
+        if h > 0.0 {
+            return Some(w / h);
+        }
+    }
+    None
 }
 
 fn apply_transform_map(transform: &mut director_core::types::Transform, map: &TransformMap) {

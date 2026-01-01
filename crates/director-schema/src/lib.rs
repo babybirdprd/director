@@ -210,14 +210,32 @@ pub struct StyleMap {
     pub width: Option<String>, // "100%", "50px", "auto"
     pub height: Option<String>,
 
+    // Size constraints
+    pub min_width: Option<String>,
+    pub max_width: Option<String>,
+    pub min_height: Option<String>,
+    pub max_height: Option<String>,
+
+    // Aspect ratio
+    /// Aspect ratio string: "16:9", "9:16", "1:1"
+    pub aspect_ratio: Option<String>,
+
     // Display mode
     /// Layout display mode: "flex" (default) or "grid"
     pub display: Option<String>,
 
-    // Flexbox
+    // Flexbox (container)
     pub flex_direction: Option<String>, // "row", "column"
     pub justify_content: Option<String>,
     pub align_items: Option<String>,
+    /// Flex wrap: "nowrap" (default), "wrap"
+    pub flex_wrap: Option<String>,
+
+    // Flexbox (item)
+    pub flex_grow: Option<f32>,
+    pub flex_shrink: Option<f32>,
+    /// Align self override: "center", "flex_start", "flex_end", "stretch"
+    pub align_self: Option<String>,
 
     // Grid template (container)
     /// Grid column definitions: ["1fr", "2fr", "100px", "auto"]
@@ -239,9 +257,43 @@ pub struct StyleMap {
     pub bg_color: Option<Color>,
     pub opacity: Option<f32>,
 
-    // Spacing
+    // Border
+    pub border_width: Option<f32>,
+    pub border_color: Option<Color>,
+    pub border_radius: Option<f32>,
+
+    // Shadow (box-shadow)
+    pub shadow_color: Option<Color>,
+    pub shadow_blur: Option<f32>,
+    /// Shadow X offset
+    pub shadow_x: Option<f32>,
+    /// Shadow Y offset
+    pub shadow_y: Option<f32>,
+
+    // Overflow
+    /// Overflow behavior: "visible" (default) or "hidden"
+    pub overflow: Option<String>,
+
+    // Spacing (uniform)
     pub padding: Option<f32>,
     pub margin: Option<f32>,
+
+    // Per-side padding
+    pub padding_top: Option<f32>,
+    pub padding_right: Option<f32>,
+    pub padding_bottom: Option<f32>,
+    pub padding_left: Option<f32>,
+
+    // Per-side margin
+    pub margin_top: Option<f32>,
+    pub margin_right: Option<f32>,
+    pub margin_bottom: Option<f32>,
+    pub margin_left: Option<f32>,
+
+    // Platform-specific safe area preset
+    /// Safe area preset: "tiktok", "youtube_shorts", "instagram_reel", "desktop", etc.
+    /// Applies platform-specific padding from DesignSystem.safe_areas
+    pub safe_area: Option<String>,
 
     // Positioning (absolute positioning support)
     /// Layout position mode: "relative" (default) or "absolute"
