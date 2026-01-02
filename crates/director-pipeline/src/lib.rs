@@ -1,7 +1,9 @@
 use director_core::animation::{Animated, EasingType};
 use director_core::element::TextSpan;
 use director_core::node::video_node::VideoSource;
-use director_core::node::{BoxNode, ImageNode, LottieNode, TextNode, VectorNode, VideoNode};
+use director_core::node::{
+    BoxNode, CompositionNode, ImageNode, LottieNode, TextNode, VectorNode, VideoNode,
+};
 use director_core::node::{EffectNode, EffectType};
 use director_core::systems::transitions::{Transition, TransitionType as CoreTransitionType};
 use director_core::types::{Color, NodeId, ObjectFit};
@@ -216,6 +218,43 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
                 shader_cache: Arc::new(std::sync::Mutex::new(HashMap::new())),
                 current_time: 0.0,
             })
+        }
+        NodeKind::Composition {
+            width,
+            height,
+            fps,
+            scenes,
+            start_offset,
+        } => {
+            // Create internal Director for the sub-composition
+            let mut internal_director = Director::new(
+                *width as i32,
+                *height as i32,
+                *fps,
+                director.assets.loader.clone(),
+                RenderMode::Export,
+                None,
+            );
+
+            // Build each scene in the sub-composition
+            let mut cumulative_time = 0.0;
+            for scene_data in scenes {
+                let root_id = build_node_recursive(&mut internal_director, &scene_data.root);
+                internal_director
+                    .timeline
+                    .push(director_core::director::TimelineItem {
+                        scene_root: root_id,
+                        start_time: cumulative_time,
+                        duration: scene_data.duration_secs,
+                        z_index: 0,
+                        audio_tracks: vec![],
+                    });
+                cumulative_time += scene_data.duration_secs;
+            }
+
+            let mut comp = CompositionNode::new(internal_director);
+            comp.start_offset = *start_offset;
+            Box::new(comp)
         }
     };
 

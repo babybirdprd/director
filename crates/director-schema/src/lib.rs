@@ -124,10 +124,29 @@ pub enum NodeKind {
     },
     /// A visual effect wrapper (blur, shadows, etc.)
     Effect { effect_type: EffectConfig },
+    /// A nested composition with its own timeline (pre-comp).
+    Composition {
+        /// Width of the composition canvas
+        width: u32,
+        /// Height of the composition canvas
+        height: u32,
+        /// Frames per second
+        #[serde(default = "default_comp_fps")]
+        fps: u32,
+        /// Scenes in this composition's timeline
+        scenes: Vec<Scene>,
+        /// Time offset for when the composition starts playing (relative to parent)
+        #[serde(default)]
+        start_offset: f64,
+    },
 }
 
 fn default_speed() -> f32 {
     1.0
+}
+
+fn default_comp_fps() -> u32 {
+    30
 }
 
 /// Configuration for visual effects applied to nodes.
@@ -522,6 +541,66 @@ mod tests {
             let json = serde_json::to_string(&trans).unwrap();
             let loaded: TransitionConfig = serde_json::from_str(&json).unwrap();
             assert_eq!(format!("{:?}", trans), format!("{:?}", loaded));
+        }
+    }
+
+    #[test]
+    fn test_composition_serialization() {
+        // Create a node with a nested Composition
+        let composition_node = Node {
+            id: "precomp_1".to_string(),
+            kind: NodeKind::Composition {
+                width: 1920,
+                height: 1080,
+                fps: 30,
+                scenes: vec![Scene {
+                    id: "inner_scene".to_string(),
+                    duration_secs: 2.0,
+                    background: Some(Color::BLACK),
+                    root: Node {
+                        id: "inner_root".to_string(),
+                        kind: NodeKind::Box {
+                            border_radius: 10.0,
+                        },
+                        style: StyleMap::default(),
+                        transform: TransformMap::default(),
+                        animations: vec![],
+                        audio_bindings: vec![],
+                        children: vec![],
+                    },
+                    transition: None,
+                }],
+                start_offset: 0.5,
+            },
+            style: StyleMap::default(),
+            transform: TransformMap::default(),
+            animations: vec![],
+            audio_bindings: vec![],
+            children: vec![],
+        };
+
+        // Roundtrip test
+        let json = serde_json::to_string_pretty(&composition_node).unwrap();
+        println!("Composition JSON:\n{}", json);
+
+        let loaded: Node = serde_json::from_str(&json).unwrap();
+
+        // Verify key fields survived roundtrip
+        match &loaded.kind {
+            NodeKind::Composition {
+                width,
+                height,
+                fps,
+                scenes,
+                start_offset,
+            } => {
+                assert_eq!(*width, 1920);
+                assert_eq!(*height, 1080);
+                assert_eq!(*fps, 30);
+                assert_eq!(scenes.len(), 1);
+                assert_eq!(*start_offset, 0.5);
+            }
+            _ => panic!("Expected Composition NodeKind"),
         }
     }
 }
