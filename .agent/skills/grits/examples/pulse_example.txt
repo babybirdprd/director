@@ -1,0 +1,14 @@
+User: "What's the status of the project?"
+Agent: `gr pulse`
+Output:
+{
+  "focus": {
+    "id": "gr-ta78df",
+    "status": "in-progress",
+    "title": "Fix Topology Edge Case"
+  },
+  "recent_commits": [
+    "49bff43 chore: release v2.8.1",
+    "c1ec352 cleanup extension"
+  ]
+}

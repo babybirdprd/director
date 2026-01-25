@@ -1,0 +1,6 @@
+User: "I want to work on the sync logic."
+Agent:
+1. `gr list --status open --type feature`
+   (Identifies gr-9rky35 "Optimize sync performance")
+2. `gr workon gr-9rky35`
+3. `gr update --id gr-9rky35 --add-symbol "grits-core/src/sync.rs"`
