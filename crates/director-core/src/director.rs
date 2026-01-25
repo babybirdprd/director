@@ -80,6 +80,12 @@ pub struct Director {
     pub assets: AssetManager,
 }
 
+/// SAFETY: Director is not thread-safe due to Skia internals (RefCounts).
+/// However, we wrap it in a Mutex for Rhai, and we strictly ensure in the App
+/// that it remains on a single thread (Axis Actor pattern).
+/// This unsafe impl allows us to put it in Arc<Mutex<>>.
+unsafe impl Send for Director {}
+
 impl Director {
     /// Creates a new Director instance.
     ///

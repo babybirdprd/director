@@ -192,7 +192,7 @@ pub fn render_frame(
 /// Renders a frame at the given time, handling transitions between scenes.
 ///
 /// Used internally by the export pipeline.
-pub(crate) fn render_at_time(
+pub fn render_at_time(
     director: &mut Director,
     layout_engine: &mut LayoutEngine,
     time: f64,

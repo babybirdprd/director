@@ -1,6 +1,6 @@
 use lottie_core::RenderTree;
 use lottie_skia::SkiaRenderer;
-use skia_safe::{EncodedImageFormat, Rect, Surface};
+use skia_safe::{EncodedImageFormat, Rect};
 use std::fs::File;
 use std::io::Write;
 

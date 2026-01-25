@@ -1,5 +1,5 @@
 use director_core::{video_wrapper::RenderMode, DefaultAssetLoader, Director};
-use image::{GenericImageView, Pixel, Rgba};
+use image::{Pixel, Rgba};
 use skia_safe::{AlphaType, ColorSpace, ColorType, EncodedImageFormat};
 use std::env;
 use std::fs;
@@ -298,7 +298,7 @@ macro_rules! visual_test_matrix {
                 use $crate::visual::setup_test_director;
                 use $crate::visual::assert_visual_match;
                 use director_core::Director;
-                use std::sync::{Arc, Mutex};
+                // use std::sync::{Arc, Mutex};
 
                 // Setup
                 let director_arc = setup_test_director(500, 500);

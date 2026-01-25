@@ -64,6 +64,8 @@ pub struct Node {
     pub transform: TransformMap,
     #[serde(default)]
     pub animations: Vec<Animation>,
+    #[serde(default)]
+    pub spring_animations: Vec<SpringAnimation>,
     /// Audio-reactive bindings for this node
     #[serde(default)]
     pub audio_bindings: Vec<AudioReactiveBinding>,
@@ -274,6 +276,8 @@ pub struct StyleMap {
 
     // Appearance
     pub bg_color: Option<Color>,
+    /// Linear gradient background (overrides bg_color if present)
+    pub bg_gradient: Option<GradientConfig>,
     pub opacity: Option<f32>,
 
     // Border
@@ -345,6 +349,13 @@ pub struct Animation {
     pub duration: f64,
     pub start_time: f64, // Relative to scene start
     pub easing: EasingType,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpringAnimation {
+    pub property: String,
+    pub target: f32,
+    pub config: SpringConfig,
 }
 
 /// Per-glyph animator for kinetic typography effects.
@@ -436,6 +447,7 @@ mod tests {
                     },
                     transform: TransformMap::default(),
                     animations: vec![],
+                    spring_animations: vec![],
                     audio_bindings: vec![],
                     children: vec![Node {
                         id: "text_1".to_string(),
@@ -450,6 +462,7 @@ mod tests {
                         },
                         transform: TransformMap::default(),
                         animations: vec![],
+                        spring_animations: vec![],
                         audio_bindings: vec![],
                         children: vec![],
                     }],
@@ -565,6 +578,7 @@ mod tests {
                         style: StyleMap::default(),
                         transform: TransformMap::default(),
                         animations: vec![],
+                        spring_animations: vec![],
                         audio_bindings: vec![],
                         children: vec![],
                     },
@@ -575,6 +589,7 @@ mod tests {
             style: StyleMap::default(),
             transform: TransformMap::default(),
             animations: vec![],
+            spring_animations: vec![],
             audio_bindings: vec![],
             children: vec![],
         };

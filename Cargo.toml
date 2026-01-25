@@ -7,7 +7,8 @@ members = [
     "crates/director-pipeline",
     "crates/lottie-core",
     "crates/lottie-data",
-    "crates/lottie-skia"
+    "crates/lottie-skia",
+    "crates/director-view"
 ]
 
 [workspace.package]

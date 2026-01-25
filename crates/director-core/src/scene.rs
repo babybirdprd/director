@@ -114,6 +114,11 @@ impl SceneGraph {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.nodes.clear();
+        self.free_indices.clear();
+    }
+
     /// Adds a new element to the scene graph and returns its ID.
     pub fn add_node(&mut self, element: Box<dyn Element>) -> NodeId {
         if let Some(id) = self.free_indices.pop() {

@@ -28,7 +28,7 @@ lottie-data = { path = "../lottie-data", version = "0.1.0" }
 lottie-skia = { path = "../lottie-skia", version = "0.1.0" }
 
 # Optional dependencies
-video-rs = { version = "0.10.5", optional = true, features = ["ndarray"] }
+
 ndarray = "0.16"
 rayon = "1.10"
 tempfile = "3.23.0"
@@ -45,10 +45,10 @@ hound = "3.5"
 tracing-subscriber = "0.3.22"
 
 [features]
-default = ["video-rs"]
+default = []
 mock_video = []
 vulkan = ["skia-safe/vulkan"]
 
 [package.metadata.docs.rs]
 no-default-features = true
-features = ["mock_video"]
+features = []

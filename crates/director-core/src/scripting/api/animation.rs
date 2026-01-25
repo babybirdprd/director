@@ -20,6 +20,111 @@ use super::super::utils::{parse_easing, parse_spring_config};
 
 /// Register animation-related Rhai functions.
 pub fn register(engine: &mut Engine) {
+    // ========== ANIMATE (with Delay) ==========
+    engine.register_fn(
+        "animate",
+        |node: &mut NodeHandle,
+         prop: &str,
+         start: f64,
+         end: f64,
+         dur: f64,
+         ease: &str,
+         delay: f64| {
+            let mut d = node.director.lock().unwrap();
+            if let Some(n) = d.scene.get_node_mut(node.id) {
+                let ease_fn = parse_easing(ease);
+
+                // Add delay segment (hold at start value)
+                if delay > 0.0 {
+                    match prop {
+                        "scale" => {
+                            n.transform.scale_x.add_segment(
+                                start as f32,
+                                start as f32,
+                                delay,
+                                crate::animation::EasingType::Linear,
+                            );
+                            n.transform.scale_y.add_segment(
+                                start as f32,
+                                start as f32,
+                                delay,
+                                crate::animation::EasingType::Linear,
+                            );
+                        }
+                        "x" | "translate_x" => n.transform.translate_x.add_segment(
+                            start as f32,
+                            start as f32,
+                            delay,
+                            crate::animation::EasingType::Linear,
+                        ),
+                        "y" | "translate_y" => n.transform.translate_y.add_segment(
+                            start as f32,
+                            start as f32,
+                            delay,
+                            crate::animation::EasingType::Linear,
+                        ),
+                        "rotation" => n.transform.rotation.add_segment(
+                            start as f32,
+                            start as f32,
+                            delay,
+                            crate::animation::EasingType::Linear,
+                        ),
+                        _ => {
+                            n.element.animate_property(
+                                prop,
+                                start as f32,
+                                start as f32,
+                                delay,
+                                "linear",
+                            );
+                        }
+                    }
+                }
+
+                // Add actual animation segment
+                match prop {
+                    "scale" => {
+                        n.transform
+                            .scale_x
+                            .add_segment(start as f32, end as f32, dur, ease_fn);
+                        n.transform
+                            .scale_y
+                            .add_segment(start as f32, end as f32, dur, ease_fn);
+                    }
+                    "scale_x" => {
+                        n.transform
+                            .scale_x
+                            .add_segment(start as f32, end as f32, dur, ease_fn)
+                    }
+                    "scale_y" => {
+                        n.transform
+                            .scale_y
+                            .add_segment(start as f32, end as f32, dur, ease_fn)
+                    }
+                    "rotation" => {
+                        n.transform
+                            .rotation
+                            .add_segment(start as f32, end as f32, dur, ease_fn)
+                    }
+                    "translate_x" | "x" => {
+                        n.transform
+                            .translate_x
+                            .add_segment(start as f32, end as f32, dur, ease_fn)
+                    }
+                    "translate_y" | "y" => {
+                        n.transform
+                            .translate_y
+                            .add_segment(start as f32, end as f32, dur, ease_fn)
+                    }
+                    _ => {
+                        n.element
+                            .animate_property(prop, start as f32, end as f32, dur, ease);
+                    }
+                }
+            }
+        },
+    );
+
     // ========== ANIMATE ==========
     engine.register_fn(
         "animate",

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Director Script Preview</title>
+    <style>
+        body {
+            background: #1e1e1e;
+            color: #eee;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #viewport {
+            width: 960px;
+            height: 540px;
+            background: #000;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #controls {
+            width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="setup">
+        <input type="text" id="scriptPath" placeholder="Absolute path to .rhai script..."
+            style="width: 350px; padding: 5px;">
+        <button onclick="initProject()">Load Script</button>
+    </div>
+    <br>
+
+    <div id="viewport">
+        <img id="preview" src="" alt="Preview">
+    </div>
+
+    <div id="controls">
+        <input type="range" id="scrubber" min="0" max="600" step="0.1" value="0">
+        <div class="meta">
+            <span id="currentTime">0.00s</span>
+            <span id="status">Ready</span>
+        </div>
+    </div>
+
+    <script>
+        const scrubber = document.getElementById('scrubber');
+        const preview = document.getElementById('preview');
+        const timeLabel = document.getElementById('currentTime');
+        const statusLabel = document.getElementById('status');
+
+        async function initProject() {
+            const path = document.getElementById('scriptPath').value;
+            statusLabel.innerText = "Initializing Script (Wait for proxies)...";
+            try {
+                const res = await fetch(`http://localhost:3000/init?script_path=${encodeURIComponent(path)}`);
+                const text = await res.text();
+                try {
+                    const data = JSON.parse(text);
+                    statusLabel.innerText = data.status + " (Duration: " + data.duration + "s)";
+                    scrubber.max = data.duration;
+                } catch (e) {
+                    // Fallback for plain text errors
+                    statusLabel.innerText = text;
+                }
+                requestRender(0);
+            } catch (e) {
+                statusLabel.innerText = "Error: " + e;
+            }
+        }
+
+        let pendingFrame = null;
+        let isRendering = false;
+
+        scrubber.addEventListener('input', (e) => {
+            const t = parseFloat(e.target.value);
+            timeLabel.innerText = t.toFixed(2) + 's';
+            requestRender(t);
+        });
+
+        function requestRender(time) {
+            pendingFrame = time;
+            processQueue();
+        }
+
+        async function processQueue() {
+            if (isRendering || pendingFrame === null) return;
+
+            isRendering = true;
+            const t = pendingFrame;
+            pendingFrame = null;
+
+            try {
+                const res = await fetch(`http://localhost:3000/render?time=${t}`);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+
+                    preview.onload = () => URL.revokeObjectURL(url);
+                    preview.src = url;
+                } else {
+                    console.error("Render failed");
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                isRendering = false;
+                if (pendingFrame !== null) {
+                    processQueue();
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

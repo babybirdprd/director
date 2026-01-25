@@ -16,9 +16,9 @@ use crate::director::Director;
 use crate::errors::RenderError;
 use crate::systems::layout::LayoutEngine;
 use crate::systems::renderer::{render_at_time, GpuContext};
-use crate::video_wrapper::{Encoder, EncoderSettings, Locator, Time};
+use crate::video_wrapper::{Encoder, EncoderSettings};
 use anyhow::Result;
-use ndarray::Array3;
+
 use skia_safe::{AlphaType, ColorSpace, ColorType};
 use std::path::PathBuf;
 use tracing::instrument;
@@ -75,10 +75,8 @@ pub fn render_export(
         }
     }
 
-    let destination: Locator = out_path.clone().into();
     let settings = EncoderSettings::preset_h264_yuv420p(width as usize, height as usize, false);
-
-    let mut encoder = Encoder::new(&destination, settings)?;
+    let mut encoder = Encoder::new(&out_path, settings)?;
 
     let info = skia_safe::ImageInfo::new(
         (width, height),
@@ -185,9 +183,7 @@ pub fn render_export(
             if let Some(bytes) = pixmap.bytes() {
                 let frame_shape = (height as usize, width as usize, 4);
                 if bytes.len() == width as usize * height as usize * 4 {
-                    let vec_bytes = bytes.to_vec();
-                    let frame = Array3::from_shape_vec(frame_shape, vec_bytes)?;
-                    encoder.encode(&frame, Time::from_secs_f64(i as f64 / fps as f64))?;
+                    encoder.encode(bytes, i as f64 / fps as f64)?;
                 }
             }
         } else {
@@ -200,14 +196,12 @@ pub fn render_export(
                 None,
             );
             if surface.read_pixels(&info, &mut bytes, (width * 4) as usize, (0, 0)) {
-                let frame_shape = (height as usize, width as usize, 4);
-                let frame = Array3::from_shape_vec(frame_shape, bytes)?;
-                encoder.encode(&frame, Time::from_secs_f64(i as f64 / fps as f64))?;
+                encoder.encode(&bytes, i as f64 / fps as f64)?;
             }
         }
 
         let audio_samples = director.mix_audio(samples_per_frame, frame_start_time);
-        encoder.encode_audio(&audio_samples, Time::from_secs_f64(frame_start_time))?;
+        encoder.encode_audio(&audio_samples, frame_start_time)?;
     }
 
     encoder.finish()?;

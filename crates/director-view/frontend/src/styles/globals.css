@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+body {
+    background-color: #0f0f0f;
+    color: #e5e5e5;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4a4a4a;
+}
+
+/* Monaco editor overrides */
+.monaco-editor {
+    border-radius: 8px;
+}
+
+.monaco-editor .margin {
+    background-color: #1a1a1a !important;
+}
+
+/* Timeline track styling */
+.timeline-track {
+    @apply relative h-2 bg-director-surface rounded-full cursor-pointer;
+}
+
+.timeline-progress {
+    @apply absolute h-full bg-director-accent rounded-full;
+}
+
+.timeline-playhead {
+    @apply absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg;
+    transform: translateX(-50%) translateY(-50%);
+}
+
+/* Button styles */
+.btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-150;
+}
+
+.btn-primary {
+    @apply bg-director-accent text-white hover:bg-director-accent-hover;
+}
+
+.btn-secondary {
+    @apply bg-director-surface text-director-text border border-director-border hover:bg-director-border;
+}
+
+.btn-icon {
+    @apply p-2 rounded-lg bg-director-surface text-director-text hover:bg-director-border transition-colors;
+}
+
+/* Panel styling */
+.panel {
+    @apply bg-director-surface border border-director-border rounded-lg;
+}
+
+/* Input styling */
+input[type="text"],
+input[type="number"] {
+    @apply bg-director-surface border border-director-border rounded-lg px-3 py-2 text-director-text;
+    @apply focus:outline-none focus:border-director-accent;
+}
+
+/* Tooltip */
+.tooltip {
+    @apply absolute z-50 px-2 py-1 text-xs bg-director-surface border border-director-border rounded shadow-lg;
+}
