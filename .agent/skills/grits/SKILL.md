@@ -12,9 +12,12 @@ To efficiently manage project tasks and utilize topological code context for inf
 ## Instructions
 1.  **Project State**: Use `gr pulse` to synchronize with active focus, blockers, and recent commits.
 2.  **Issue Tracking**:
-    -   **List**: `gr list [--status <state>] [--type <type>]`. Use this to find IDs.
+    -   **List**: `gr list [--status <state>] [--type <type>] [--priority <int>]`.
     -   **View Details**: `gr show <id>`. Displays "Connected Files" which are used for codebase assembly.
-    -   **Manage Lifecycle**: use `gr create`, `gr update --id <id>`, `gr close <id>`, or `gr edit <id>`.
+    -   **Manage Lifecycle**:
+        -   **Create**: `gr create "<TITLE>" [-d "<DESCRIPTION>"] [-t <TYPE>] [-p <PRIORITY>]`. (Note: Title is a positional argument, not a flag).
+        -   **Update**: `gr update --id <ID> [--title <TITLE>] [--description <DESC>] [--status <STATUS>] [--add-dependency <DEP_ID>] [--add-symbol <PATH>]`.
+        -   **Close**: `gr close <id>`.
 3.  **Code Context & Focus**:
     -   **Sticky Focus**: `gr workon <id>` sets the active task.
     -   **Topological Analysis**: `gr star <file-path>` finds connected symbols and modules. **IMPORTANT: You MUST use forward slashes (`/`) for paths on Windows (e.g., `src/main.rs`).**
@@ -30,6 +33,7 @@ This skill utilizes pattern matching for common interactions. Review the files i
 - **JSON Pulse**: `examples/pulse_example.txt`
 - **Issue & Symbol Linkage**: `examples/workon_example.txt`
 - **Graph Results**: `examples/star_example.txt`
+- **Lifecycle (Create/Link)**: `examples/lifecycle_example.txt`
 - **Utilities & Setup**: `examples/utility_example.txt`
 
 ## Constraints
