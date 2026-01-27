@@ -6,6 +6,7 @@ description: High-fidelity orchestration for researching and planning complex te
    - Run `gr list --format json` to triage open work.
    - Select the highest priority issue (Priority 1) that is unblocked.
    - **Sticky Focus**: Run `gr workon <ID>` to lock your workspace.
+   - **Context Check**: Run `gr pulse`. If `affected_symbols` (Connected Files) is empty, **STOP**. Switch to [.agent/workflows/discovery-workflow.md](.agent/workflows/discovery-workflow.md) immediately.
 
 2. **Topological Research (Architecture Audit)**
    - // turbo
