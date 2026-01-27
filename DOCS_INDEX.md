@@ -10,6 +10,7 @@
 | **AI Agents** | [AGENTS.md](AGENTS.md) |
 | **Users (Rhai scripting)** | [docs/user/scripting-guide.md](docs/user/scripting-guide.md) |
 | **Contributors** | [docs/contributing/development.md](docs/contributing/development.md) |
+| **Core Internals** | [crates/director-core/docs/INDEX.md](crates/director-core/docs/INDEX.md) |
 | **Architecture** | [docs/architecture/overview.md](docs/architecture/overview.md) |
 
 ## Directory Structure
@@ -30,7 +31,9 @@ docs/
     └── *.md               # Feature specs (SAM3, Templates, Rhai stdlib)
 
 crates/
-├── director-core/README.md    # Core engine: rendering, layout, animation, scripting
+├── director-core/             # Core engine
+│   ├── README.md
+│   └── docs/                  # Detailed internal documentation (Rendering, Scene Graph, etc.)
 ├── director-cli/README.md     # CLI video renderer
 ├── director-schema/README.md  # Schema type definitions
 └── director-pipeline/README.md # Asset pipeline utilities
