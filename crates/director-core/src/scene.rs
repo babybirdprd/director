@@ -2,6 +2,9 @@
 //!
 //! Arena-based storage for the node hierarchy.
 //!
+// TODO(gr-c8fuow): Schema: Add Z-Index Support
+// TODO(gr-g610pf): Core: Path Animation Optimization
+//!
 //! ## Responsibilities
 //! - **Node Storage**: `Vec<Option<SceneNode>>` arena with `NodeId` indices.
 //! - **Hierarchy**: Parent-child relationships via `children` and `parent`.

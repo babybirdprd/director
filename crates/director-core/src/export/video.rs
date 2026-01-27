@@ -2,6 +2,9 @@
 //!
 //! Renders Director timeline to video files (MP4).
 //!
+// TODO(gr-42zs2q): Export: GPL-Safe Transparent Video
+// TODO(gr-793wlj): Hardware Acceleration (GPU + NVENC)
+//!
 //! ## Responsibilities
 //! - **Frame Loop**: Iterates through all frames.
 //! - **Encoding**: FFmpeg H.264/AAC encoding.

@@ -2,6 +2,8 @@
 //!
 //! Handles visual transitions between scenes using SkSL shaders.
 //!
+// TODO(gr-tmk4i1): Systems: Expanded SkSL Transitions
+//!
 //! ## Responsibilities
 //! - **Transition Types**: Enum of supported transition effects.
 //! - **Shader Definitions**: GLSL/SkSL code for each transition.

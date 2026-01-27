@@ -2,6 +2,10 @@
 //!
 //! Shared data types used across the engine.
 //!
+// TODO(gr-g610pf): Core: Path Animation Optimization
+// TODO(gr-lewi9j): Animation: Path Morphing
+// TODO(gr-y798dh): Animation: Perceptual Color Interpolation
+//!
 //! ## Responsibilities
 //! - **Color**: RGBA color representation with Skia conversion.
 //! - **Transform**: Animated 2D transforms (scale, rotation, translation).

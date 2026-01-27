@@ -2,6 +2,8 @@
 //!
 //! Keyframe and spring-based animation system.
 //!
+// TODO(gr-w4drfw): Schema: Add SpringConfig
+//!
 //! ## Responsibilities
 //! - **Animated<T>**: Generic animated value with keyframe segments.
 //! - **Easing**: All easing functions (linear, ease_in_out, elastic, bounce, etc.).

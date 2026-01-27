@@ -2,6 +2,10 @@
 //!
 //! Handles visual output via Skia.
 //!
+// TODO(gr-793wlj): Hardware Acceleration (GPU + NVENC)
+// TODO(gr-rp79cy): Core: Motion Blur Implementation
+// TODO(gr-yje393): Core: Parallel Update & Render
+//!
 //! ## Responsibilities
 //! - **Scene Traversal**: Recursively paints `SceneNode`s to Canvas (`render_recursive`).
 //! - **Layer Composition**: Manages canvas save/restore for transforms.

@@ -2,6 +2,9 @@
 //!
 //! The central orchestrator for the video rendering engine.
 //!
+// TODO(gr-g610pf): Core: Path Animation Optimization
+// TODO(gr-yje393): Core: Parallel Update & Render
+//!
 //! ## Responsibilities
 //! - **Timeline Management**: Maintains a `Vec<TimelineItem>` of scenes.
 //! - **Update Loop**: Drives animation, audio sync, and scene transitions.

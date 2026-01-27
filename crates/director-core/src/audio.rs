@@ -2,6 +2,8 @@
 //!
 //! Audio mixing, playback, and spectrum analysis.
 //!
+// TODO(gr-0ovb9k): Pipeline: Implement Audio Bindings
+//!
 //! ## Responsibilities
 //! - **Audio Mixing**: Combines multiple `AudioTrack`s into final output.
 //! - **Scene Graph Audio**: Collects audio from scene nodes (`mix_scene_audio`).
