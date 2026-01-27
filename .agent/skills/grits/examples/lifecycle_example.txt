@@ -1,9 +1,0 @@
-User: "Create a new high priority task for the renderer and link it to the core epic."
-Agent:
-1. `gr create "New Renderer Task" -d "Implementation of direct GPU path" -p 1 -t task`
-   (Returns ID: gr-abc123)
-2. `gr update --id gr-abc123 --add-dependency gr-core-epic`
-3. `gr update --id gr-abc123 --add-symbol "crates/renderer/src/lib.rs"`
-
-User: "Add a sub-task for expressions and mark it as a bug."
-Agent: `gr create "Fix Expression Parser" -t bug -p 2 -d "Parser fails on nested ternary operators"`

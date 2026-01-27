@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use director_core::animation::{Animated, EasingType};
 use director_core::element::TextSpan;
 use director_core::node::video_node::VideoSource;
@@ -22,7 +23,7 @@ use taffy::style::{
 };
 
 /// Converts a Schema Request into a runnable Director instance.
-pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Director {
+pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Result<Director> {
     let mut director = Director::new(
         request.width as i32,
         request.height as i32,
@@ -38,7 +39,8 @@ pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Direct
 
     for scene_data in &request.scenes {
         // Build the scene graph for this scene
-        let root_id = build_node_recursive(&mut director, &scene_data.root);
+        let root_id = build_node_recursive(&mut director, &scene_data.root)
+            .with_context(|| format!("Failed to build scene graph for scene: {}", scene_data.id))?;
 
         // Calculate start time based on previous scenes
         let start_time = cumulative_time;
@@ -74,7 +76,7 @@ pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Direct
         }
     }
 
-    director
+    Ok(director)
 }
 
 /// Converts schema TransitionType to core TransitionType
@@ -89,7 +91,7 @@ fn convert_transition_type(kind: &TransitionType) -> CoreTransitionType {
     }
 }
 
-fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
+fn build_node_recursive(director: &mut Director, node_def: &Node) -> Result<NodeId> {
     // 1. Create Element based on NodeKind
     let mut element: Box<dyn Element> = match &node_def.kind {
         NodeKind::Box { border_radius } => {
@@ -131,8 +133,12 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
             Box::new(t)
         }
         NodeKind::Image { src, object_fit } => {
-            // Load bytes immediately (blocking for now)
-            let bytes = director.assets.loader.load_bytes(src).unwrap_or_default();
+            // Load bytes immediately
+            let bytes = director
+                .assets
+                .loader
+                .load_bytes(src)
+                .with_context(|| format!("Failed to load image asset: {}", src))?;
             let mut img = ImageNode::new(bytes);
             if let Some(fit) = object_fit {
                 img.object_fit = parse_object_fit(fit);
@@ -141,7 +147,11 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
         }
         NodeKind::Video { src, object_fit } => {
             // Load video bytes and create VideoNode
-            let bytes = director.assets.loader.load_bytes(src).unwrap_or_default();
+            let bytes = director
+                .assets
+                .loader
+                .load_bytes(src)
+                .with_context(|| format!("Failed to load video asset: {}", src))?;
             let source = VideoSource::Bytes(bytes);
             let mut vid = VideoNode::new(source, RenderMode::Export);
             if let Some(fit) = object_fit {
@@ -151,7 +161,11 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
         }
         NodeKind::Vector { src } => {
             // Load SVG bytes and create VectorNode
-            let bytes = director.assets.loader.load_bytes(src).unwrap_or_default();
+            let bytes = director
+                .assets
+                .loader
+                .load_bytes(src)
+                .with_context(|| format!("Failed to load vector asset: {}", src))?;
             Box::new(VectorNode::new(&bytes))
         }
         NodeKind::Lottie {
@@ -160,14 +174,18 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
             loop_animation,
         } => {
             // Load Lottie JSON and create LottieNode
-            let bytes = director.assets.loader.load_bytes(src).unwrap_or_default();
+            let bytes = director
+                .assets
+                .loader
+                .load_bytes(src)
+                .with_context(|| format!("Failed to load Lottie asset: {}", src))?;
             match LottieNode::new(&bytes, HashMap::new(), &director.assets) {
                 Ok(mut lottie) => {
                     lottie.speed = *speed;
                     lottie.loop_anim = *loop_animation;
                     Box::new(lottie)
                 }
-                Err(_) => Box::new(BoxNode::new()), // Fallback on error
+                Err(e) => return Err(anyhow::anyhow!("Failed to parse Lottie JSON: {}", e)),
             }
         }
         NodeKind::Effect { effect_type } => {
@@ -239,7 +257,10 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
             // Build each scene in the sub-composition
             let mut cumulative_time = 0.0;
             for scene_data in scenes {
-                let root_id = build_node_recursive(&mut internal_director, &scene_data.root);
+                let root_id = build_node_recursive(&mut internal_director, &scene_data.root)
+                    .with_context(|| {
+                        format!("Failed to build sub-composition scene: {}", scene_data.id)
+                    })?;
                 internal_director
                     .timeline
                     .push(director_core::director::TimelineItem {
@@ -322,11 +343,12 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> NodeId {
 
     // 4. Recurse Children
     for child_def in &node_def.children {
-        let child_id = build_node_recursive(director, child_def);
+        let child_id = build_node_recursive(director, child_def)
+            .with_context(|| format!("Failed to build child node: {}", child_def.id))?;
         director.scene.add_child(id, child_id);
     }
 
-    id
+    Ok(id)
 }
 
 fn apply_animations(element: &mut Box<dyn Element>, animations: &[Animation]) {

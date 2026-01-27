@@ -833,6 +833,7 @@ dependencies = [
 name = "director-pipeline"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "director-core",
  "director-schema",
  "taffy",
