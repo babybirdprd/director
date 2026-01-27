@@ -5,12 +5,12 @@ description: High-fidelity orchestration for researching and planning complex te
 1. **Task Selection & Focus**
    - Run `gr list --format json` to triage open work.
    - Select the highest priority issue (Priority 1) that is unblocked.
-   - **Sticky Focus**: Run `gr workon <ID>` to lock your workspace.
-   - **Context Check**: Run `gr pulse`. If `affected_symbols` (Connected Files) is empty, **STOP**. Switch to [.agent/workflows/discovery-workflow.md](.agent/workflows/discovery-workflow.md) immediately.
+    - **Sticky Focus**: Run `gr workon <ID>` to lock your workspace.
+    - **Context Check**: Run `gr pulse` (no ID). If `affected_symbols` (Connected Files) is empty, **STOP**. Switch to [.agent/workflows/discovery-workflow.md](.agent/workflows/discovery-workflow.md) immediately.
 
 2. **Topological Research (Architecture Audit)**
    - // turbo
-     Run `gr star` and `gr update --scan-file` to map the source dependencies.
+   - Run `gr context assemble` to gather the current technical environment.
    - **Conflict Check**: Identify if these changes intersect with other in-progress issues (`gr pulse`).
    - **Invariant Audit**: Check `docs/architecture/` (if exists) or code layers. Ensure your plan won't introduce circular dependencies.
 

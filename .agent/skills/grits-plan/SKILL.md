@@ -14,7 +14,8 @@ To turn high-level **User Intent** (`description`) into a concrete, executable *
 2.  **Pulse First**: Start every session with `gr pulse` to synchronize your world model.
 3.  **Topology is Truth**: Trust the dependency graph (`gr star`) over raw text search.
 4.  **Link Your Work**: Use `gr update --scan-file` to attach relevant files to the issue.
-5.  **Context-Aware**: After `gr workon`, subsequent commands auto-target the focused issue.
+5.  **Context-Aware**:- **Never Guess CLI Syntax**: If unsure of a command's arguments, run `gr <command> --help` first.
+- **Session Focus**: Favor `gr workon <ID>` followed by bare commands (`gr pulse`, `gr context assemble`) rather than passing IDs to every command.
 
 ## 📋 Role & Protocol
 1. **Analyze**: Read User Intent. If vague (e.g., "fix stuff"), stop and ask for clarification (**Ambiguity Blocker**).

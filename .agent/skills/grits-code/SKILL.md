@@ -21,8 +21,10 @@ To act as the project's **Builder**. You execute the technical **Implementation 
 2. **Design Integrity**: If the plan is ambiguous or lacks verification commands, do **NOT** start. Ask the Planner for detail.
 3. **The IVL Cycle**: Execute using the **Implement-Verify-Log** loop for every chunk:
    - **Implement**: Small, atomic edits only.
+   - **Never Guess CLI Syntax**: If unsure of a command's arguments, run `gr <command> --help` first.
    - **Verify**: Run the commands defined in `acceptance_criteria`.
    - **Log**: Append technical proofs (test results) to the `notes`.
+- **Session Focus**: Favor `gr workon <ID>` followed by bare commands (`gr pulse`, `gr context assemble`) rather than passing IDs to every command.
 4. **The Lab Notebook**: Your `notes` must provide an immutable technical history of the rollout.
 5. **Final Proof**: Run full regression before closing.
 

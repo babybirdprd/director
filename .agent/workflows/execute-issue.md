@@ -5,11 +5,12 @@ description: Orchestrates the implementation of a planned issue, moving it to co
 // turbo-all
 
 ### Phase 0: Baseline Verification (Safety First)
-1. **Hydrate**: Run `gr pulse` to read the `design` and `acceptance_criteria`.
-2. **Plan Check**: If `design` is empty, **STOP**. Switch to [.agent/workflows/plan-issue.md](.agent/workflows/plan-issue.md) immediately.
-3. **Context**: Run `gr context assemble` to load the technical environment.
-4. **Audit**: Run the project's default build/test command (e.g., `cargo check` or `npm run build`).
-5. **STOP**: If the baseline is broken, do **NOT** attempt the implementation. Fix the base or flag a blocker.
+1. **Focus**: Run `gr workon <ID>` to lock your session and set the technical focus.
+2. **Hydrate**: Run `gr pulse` (no ID) to read the `design` and `acceptance_criteria`.
+3. **Plan Check**: If `design` is empty, **STOP**. Switch to [.agent/workflows/plan-issue.md](.agent/workflows/plan-issue.md) immediately.
+4. **Context**: Run `gr context assemble` (no ID) to load the technical environment into your memory.
+5. **Audit**: Run the project's default build/test command (e.g., `cargo check` or `npm run build`).
+6. **STOP**: If the baseline is broken, do **NOT** attempt the implementation. Fix the base or flag a blocker.
 
 ### Phase 1: The Implement-Verify-Log (IVL) Cycle
 For each "Atomic Chunk" defined in the `design`:
