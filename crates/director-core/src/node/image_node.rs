@@ -1,7 +1,7 @@
 use crate::animation::Animated;
 use crate::element::Element;
 use crate::errors::RenderError;
-use crate::node::{parse_easing, calculate_object_fit_rect};
+use crate::node::{calculate_object_fit_rect, parse_easing};
 use crate::types::ObjectFit;
 use skia_safe::{Canvas, ClipOp, Color4f, Data, Image, Paint, Rect};
 use std::any::Any;
@@ -20,6 +20,15 @@ pub struct ImageNode {
 impl ImageNode {
     pub fn new(data: Vec<u8>) -> Self {
         let image = Image::from_encoded(Data::new_copy(&data));
+        Self {
+            image,
+            opacity: Animated::new(1.0),
+            style: Style::DEFAULT,
+            object_fit: ObjectFit::Cover,
+        }
+    }
+
+    pub fn from_image(image: Option<Image>) -> Self {
         Self {
             image,
             opacity: Animated::new(1.0),
@@ -78,9 +87,7 @@ impl Element for ImageNode {
             if self.object_fit == ObjectFit::Cover {
                 canvas.clip_rect(rect, ClipOp::Intersect, true);
             }
-            canvas.draw_image_rect_with_sampling_options(
-                img, None, draw_rect, sampling, &paint,
-            );
+            canvas.draw_image_rect_with_sampling_options(img, None, draw_rect, sampling, &paint);
             canvas.restore();
         }
         draw_children(canvas);

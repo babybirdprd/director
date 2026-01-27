@@ -1,5 +1,5 @@
 use anyhow::Result;
-use director_core::{AssetLoader, DefaultAssetLoader};
+use director_core::AssetLoader;
 use director_pipeline::load_movie;
 use director_schema::{MovieRequest, Node, NodeKind, Scene};
 use std::sync::Arc;

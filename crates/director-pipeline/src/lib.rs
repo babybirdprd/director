@@ -1,11 +1,13 @@
 use anyhow::{Context, Result};
-use director_core::animation::{Animated, EasingType};
-use director_core::element::TextSpan;
+use director_core::animation::{Animated, EasingType, SpringConfig as CoreSpringConfig};
+use director_core::audio::load_audio_bytes;
+use director_core::element::TextSpan; // Added indirectly if needed, but keeping existing imports clean
 use director_core::node::video_node::VideoSource;
 use director_core::node::{
-    BoxNode, CompositionNode, ImageNode, LottieNode, TextNode, VectorNode, VideoNode,
+    BoxNode, CompositionNode, EffectNode, EffectType, ImageNode, LottieNode, TextNode, VectorNode,
+    VideoNode,
 };
-use director_core::node::{EffectNode, EffectType};
+use director_core::scene::AudioBinding;
 use director_core::systems::transitions::{Transition, TransitionType as CoreTransitionType};
 use director_core::types::{Color, NodeId, ObjectFit};
 use director_core::video_wrapper::RenderMode;
@@ -33,13 +35,40 @@ pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Result
         None,
     );
 
+    // 0. Load Global Audio Tracks
+    let mut track_id_map: HashMap<String, usize> = HashMap::new();
+    for track in &request.audio_tracks {
+        // Load bytes
+        let bytes = director
+            .assets
+            .loader
+            .load_bytes(&track.src)
+            .with_context(|| format!("Failed to load audio track: {}", track.src))?;
+
+        // Decode to samples
+        let samples = load_audio_bytes(&bytes, director.audio_mixer.sample_rate)
+            .with_context(|| format!("Failed to decode audio track: {}", track.src))?;
+
+        // Add to mixer
+        let idx = director.add_global_audio(samples);
+
+        // Update track properties
+        if let Some(core_track) = director.audio_mixer.get_track_mut(idx) {
+            core_track.start_time = track.start_time;
+            core_track.loop_audio = track.loop_audio;
+            core_track.volume = Animated::new(track.volume);
+        }
+
+        track_id_map.insert(track.id.clone(), idx);
+    }
+
     // Build transition list from scene configs
     let mut scene_end_times = Vec::new();
     let mut cumulative_time = 0.0;
 
     for scene_data in &request.scenes {
         // Build the scene graph for this scene
-        let root_id = build_node_recursive(&mut director, &scene_data.root)
+        let root_id = build_node_recursive(&mut director, &scene_data.root, &track_id_map)
             .with_context(|| format!("Failed to build scene graph for scene: {}", scene_data.id))?;
 
         // Calculate start time based on previous scenes
@@ -91,7 +120,11 @@ fn convert_transition_type(kind: &TransitionType) -> CoreTransitionType {
     }
 }
 
-fn build_node_recursive(director: &mut Director, node_def: &Node) -> Result<NodeId> {
+fn build_node_recursive(
+    director: &mut Director,
+    node_def: &Node,
+    track_id_map: &HashMap<String, usize>,
+) -> Result<NodeId> {
     // 1. Create Element based on NodeKind
     let mut element: Box<dyn Element> = match &node_def.kind {
         NodeKind::Box { border_radius } => {
@@ -257,10 +290,11 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> Result<Node
             // Build each scene in the sub-composition
             let mut cumulative_time = 0.0;
             for scene_data in scenes {
-                let root_id = build_node_recursive(&mut internal_director, &scene_data.root)
-                    .with_context(|| {
-                        format!("Failed to build sub-composition scene: {}", scene_data.id)
-                    })?;
+                let root_id =
+                    build_node_recursive(&mut internal_director, &scene_data.root, track_id_map)
+                        .with_context(|| {
+                            format!("Failed to build sub-composition scene: {}", scene_data.id)
+                        })?;
                 internal_director
                     .timeline
                     .push(director_core::director::TimelineItem {
@@ -339,11 +373,60 @@ fn build_node_recursive(director: &mut Director, node_def: &Node) -> Result<Node
 
         // Apply Animations (Must be done after layout/transform setup as requested)
         apply_animations(&mut node.element, &node_def.animations);
+
+        // Apply Spring Animations
+        for spring in &node_def.spring_animations {
+            let config = CoreSpringConfig {
+                stiffness: spring.config.stiffness,
+                damping: spring.config.damping,
+                mass: spring.config.mass,
+                velocity: spring.config.velocity,
+            };
+
+            match spring.property.as_str() {
+                "x" => node.transform.translate_x.add_spring(spring.target, config),
+                "y" => node.transform.translate_y.add_spring(spring.target, config),
+                "scale" => {
+                    node.transform.scale_x.add_spring(spring.target, config);
+                    node.transform.scale_y.add_spring(spring.target, config);
+                }
+                "scale_x" => node.transform.scale_x.add_spring(spring.target, config),
+                "scale_y" => node.transform.scale_y.add_spring(spring.target, config),
+                "rotation" => node.transform.rotation.add_spring(spring.target, config),
+                _ => {
+                    node.element.animate_property_spring(
+                        &spring.property,
+                        None,
+                        spring.target,
+                        config,
+                    );
+                }
+            }
+        }
+
+        // Apply Audio Bindings
+        for binding in &node_def.audio_bindings {
+            if let Some(&track_idx) = track_id_map.get(&binding.audio_id) {
+                let core_binding = AudioBinding {
+                    track_id: track_idx,
+                    band: binding.band.clone(),
+                    property: binding.property.clone(),
+                    min_value: binding.min_value,
+                    max_value: binding.max_value,
+                    smoothing: binding.smoothing,
+                    prev_value: binding.min_value,
+                };
+                node.audio_bindings.push(core_binding);
+            } else {
+                // tracing::warn!("Audio binding references missing track: {}", binding.audio_id);
+            }
+        }
     }
 
     // 4. Recurse Children
+    // 4. Recurse Children
     for child_def in &node_def.children {
-        let child_id = build_node_recursive(director, child_def)
+        let child_id = build_node_recursive(director, child_def, track_id_map)
             .with_context(|| format!("Failed to build child node: {}", child_def.id))?;
         director.scene.add_child(id, child_id);
     }

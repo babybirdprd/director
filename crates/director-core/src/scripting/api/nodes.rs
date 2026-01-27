@@ -84,9 +84,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("add_image", move |parent: &mut NodeHandle, path: &str| {
         let mut d = parent.director.lock().unwrap();
-        let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+        let image = d.assets.load_image(path);
 
-        let img_node = ImageNode::new(bytes);
+        let img_node = ImageNode::from_image(image);
         let id = d.scene.add_node(Box::new(img_node));
         d.scene.add_child(parent.id, id);
         NodeHandle {
@@ -97,9 +97,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("add_image", |scene: &mut SceneHandle, path: &str| {
         let mut d = scene.director.lock().unwrap();
-        let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+        let image = d.assets.load_image(path);
 
-        let img_node = ImageNode::new(bytes);
+        let img_node = ImageNode::from_image(image);
         let id = d.scene.add_node(Box::new(img_node));
         d.scene.add_child(scene.root_id, id);
         NodeHandle {
@@ -112,9 +112,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         "add_image",
         |scene: &mut SceneHandle, path: &str, props: rhai::Map| {
             let mut d = scene.director.lock().unwrap();
-            let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+            let image = d.assets.load_image(path);
 
-            let mut img_node = ImageNode::new(bytes);
+            let mut img_node = ImageNode::from_image(image);
             parse_layout_style(&props, &mut img_node.style);
 
             if let Some(fit_str) = props
@@ -144,9 +144,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         "add_image",
         |parent: &mut NodeHandle, path: &str, props: rhai::Map| {
             let mut d = parent.director.lock().unwrap();
-            let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+            let image = d.assets.load_image(path);
 
-            let mut img_node = ImageNode::new(bytes);
+            let mut img_node = ImageNode::from_image(image);
             parse_layout_style(&props, &mut img_node.style);
 
             if let Some(fit_str) = props
@@ -177,13 +177,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         "add_lottie",
         |parent: &mut NodeHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
             let mut d = parent.director.lock().unwrap();
-            let bytes = d
-                .assets
-                .loader
-                .load_bytes(path)
-                .map_err(|e| e.to_string())?;
+            let blob = d.assets.load_blob(path).map_err(|e| e.to_string())?;
 
-            match LottieNode::new(&bytes, HashMap::new(), &d.assets) {
+            match LottieNode::new(&blob, HashMap::new(), &d.assets) {
                 Ok(lottie_node) => {
                     let id = d.scene.add_node(Box::new(lottie_node));
                     d.scene.add_child(parent.id, id);
@@ -204,11 +200,7 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
          props: rhai::Map|
          -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
             let mut d = parent.director.lock().unwrap();
-            let bytes = d
-                .assets
-                .loader
-                .load_bytes(path)
-                .map_err(|e| e.to_string())?;
+            let blob = d.assets.load_blob(path).map_err(|e| e.to_string())?;
 
             let mut assets_map = HashMap::new();
             if let Some(assets_prop) = props
@@ -217,20 +209,14 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
             {
                 for (key, val) in assets_prop {
                     if let Ok(asset_path) = val.into_string() {
-                        let asset_bytes = d
-                            .assets
-                            .loader
-                            .load_bytes(&asset_path)
-                            .unwrap_or(Vec::new());
-                        let data = skia_safe::Data::new_copy(&asset_bytes);
-                        if let Some(image) = skia_safe::Image::from_encoded(data) {
+                        if let Some(image) = d.assets.load_image(&asset_path) {
                             assets_map.insert(key.to_string(), image);
                         }
                     }
                 }
             }
 
-            match LottieNode::new(&bytes, assets_map, &d.assets) {
+            match LottieNode::new(&blob, assets_map, &d.assets) {
                 Ok(mut lottie_node) => {
                     parse_layout_style(&props, &mut lottie_node.style);
                     if let Some(v) = props.get("speed").and_then(|v| v.as_float().ok()) {
@@ -264,11 +250,7 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
          props: rhai::Map|
          -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
             let mut d = scene.director.lock().unwrap();
-            let bytes = d
-                .assets
-                .loader
-                .load_bytes(path)
-                .map_err(|e| e.to_string())?;
+            let blob = d.assets.load_blob(path).map_err(|e| e.to_string())?;
 
             let mut assets_map = HashMap::new();
             if let Some(assets_prop) = props
@@ -277,20 +259,14 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
             {
                 for (key, val) in assets_prop {
                     if let Ok(asset_path) = val.into_string() {
-                        let asset_bytes = d
-                            .assets
-                            .loader
-                            .load_bytes(&asset_path)
-                            .unwrap_or(Vec::new());
-                        let data = skia_safe::Data::new_copy(&asset_bytes);
-                        if let Some(image) = skia_safe::Image::from_encoded(data) {
+                        if let Some(image) = d.assets.load_image(&asset_path) {
                             assets_map.insert(key.to_string(), image);
                         }
                     }
                 }
             }
 
-            match LottieNode::new(&bytes, assets_map, &d.assets) {
+            match LottieNode::new(&blob, assets_map, &d.assets) {
                 Ok(mut lottie_node) => {
                     parse_layout_style(&props, &mut lottie_node.style);
                     if let Some(v) = props.get("speed").and_then(|v| v.as_float().ok()) {
@@ -320,9 +296,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
     // ========== ADD_SVG ==========
     engine.register_fn("add_svg", |scene: &mut SceneHandle, path: &str| {
         let mut d = scene.director.lock().unwrap();
-        let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+        let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
 
-        let vec_node = VectorNode::new(&bytes);
+        let vec_node = VectorNode::new(&blob);
         let id = d.scene.add_node(Box::new(vec_node));
         d.scene.add_child(scene.root_id, id);
         NodeHandle {
@@ -335,9 +311,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         "add_svg",
         |scene: &mut SceneHandle, path: &str, props: rhai::Map| {
             let mut d = scene.director.lock().unwrap();
-            let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
 
-            let mut vec_node = VectorNode::new(&bytes);
+            let mut vec_node = VectorNode::new(&blob);
             parse_layout_style(&props, &mut vec_node.style);
 
             let id = d.scene.add_node(Box::new(vec_node));
@@ -356,9 +332,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
 
     engine.register_fn("add_svg", |parent: &mut NodeHandle, path: &str| {
         let mut d = parent.director.lock().unwrap();
-        let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+        let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
 
-        let vec_node = VectorNode::new(&bytes);
+        let vec_node = VectorNode::new(&blob);
         let id = d.scene.add_node(Box::new(vec_node));
         d.scene.add_child(parent.id, id);
         NodeHandle {
@@ -371,9 +347,9 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         "add_svg",
         |parent: &mut NodeHandle, path: &str, props: rhai::Map| {
             let mut d = parent.director.lock().unwrap();
-            let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
+            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
 
-            let mut vec_node = VectorNode::new(&bytes);
+            let mut vec_node = VectorNode::new(&blob);
             parse_layout_style(&props, &mut vec_node.style);
 
             let id = d.scene.add_node(Box::new(vec_node));
@@ -399,8 +375,8 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         let source = if p.exists() && p.is_file() {
             VideoSource::Path(p.to_path_buf())
         } else {
-            let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
-            VideoSource::Bytes(bytes)
+            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+            VideoSource::Bytes((*blob).clone())
         };
 
         let vid_node = VideoNode::new(source, mode);
@@ -422,8 +398,8 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
             let source = if p.exists() && p.is_file() {
                 VideoSource::Path(p.to_path_buf())
             } else {
-                let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
-                VideoSource::Bytes(bytes)
+                let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+                VideoSource::Bytes((*blob).clone())
             };
 
             let mut vid_node = VideoNode::new(source, mode);
@@ -460,8 +436,8 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
         let source = if p.exists() && p.is_file() {
             VideoSource::Path(p.to_path_buf())
         } else {
-            let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
-            VideoSource::Bytes(bytes)
+            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+            VideoSource::Bytes((*blob).clone())
         };
 
         let vid_node = VideoNode::new(source, mode);
@@ -483,8 +459,8 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
             let source = if p.exists() && p.is_file() {
                 VideoSource::Path(p.to_path_buf())
             } else {
-                let bytes = d.assets.loader.load_bytes(path).unwrap_or(Vec::new());
-                VideoSource::Bytes(bytes)
+                let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+                VideoSource::Bytes((*blob).clone())
             };
 
             let mut vid_node = VideoNode::new(source, mode);

@@ -239,11 +239,16 @@ impl Element for LottieNode {
             // Miss: Render to surface
             let image_info = ImageInfo::new((w, h), ColorType::RGBA8888, AlphaType::Premul, None);
 
-            // Try make_surface from canvas (GPU friendly)
-            // Note: canvas.make_surface is not available in safe bindings directly or has different name.
-            // Using raster fallback for now.
-            let mut surface =
-                surfaces::raster(&image_info, None, None).ok_or(RenderError::SurfaceFailure)?;
+            // Try creating a surface from the current canvas (preserves GPU context)
+            let mut surface = canvas
+                .new_surface(&image_info, None)
+                .or_else(|| surfaces::raster(&image_info, None, None))
+                .ok_or(RenderError::SurfaceFailure)?;
+
+            // NOTE: We are using canvas.new_surface() which attempts to create a compatible surface.
+            // If the parent canvas is GPU-backed, this new surface will be too.
+            // If the parent is Raster (CPU), this will be Raster.
+            // This ensures we don't force Raster when we could be using GPU.
 
             // Clear surface
             surface.canvas().clear(Color::TRANSPARENT);
