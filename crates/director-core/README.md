@@ -2,6 +2,17 @@
 
 The heart of Director Engine. Contains rendering, layout, animation, and scripting logic.
 
+## Documentation
+
+**[📚 Internal Documentation (docs/)](docs/INDEX.md)**
+
+*   **[Architecture](docs/ARCHITECTURE.md)**
+*   **[Scene Graph](docs/SCENE_GRAPH.md)**
+*   **[Rendering](docs/RENDERING.md)**
+*   **[Layout](docs/LAYOUT.md)**
+*   **[Scripting](docs/SCRIPTING.md)**
+*   **[Audio](docs/AUDIO.md)**
+
 ## Overview
 
 | Component | Purpose |
@@ -30,24 +41,9 @@ scripting::register_rhai_api(&mut engine, Arc::new(DefaultAssetLoader));
 let movie = engine.eval::<scripting::MovieHandle>(script)?;
 ```
 
-## Module Map
-
-| Module | Purpose |
-|--------|---------|
-| `director.rs` | Timeline coordinator |
-| `scene.rs` | Scene graph storage |
-| `scripting.rs` | Rhai bindings |
-| `animation.rs` | Animation system |
-| `systems/` | Renderer, Layout, Assets |
-| `node/` | Node implementations (Box, Text, Image, etc.) |
-
 ## Feature Flags
 
 | Flag | Purpose |
 |------|---------|
 | `mock_video` | Build without FFmpeg |
 | `vulkan` | Enable Vulkan Skia backend |
-
----
-
-*See [AGENTS.md](../../AGENTS.md) for detailed architecture.*
