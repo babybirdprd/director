@@ -2,7 +2,7 @@
 //!
 //! Handles visual transitions between scenes using SkSL shaders.
 //!
-// TODO(gr-tmk4i1): Systems: Expanded SkSL Transitions
+// TODO: Implement Wave, Glitch, Iris, and Spiral transitions via SkSL.
 //!
 //! ## Responsibilities
 //! - **Transition Types**: Enum of supported transition effects.

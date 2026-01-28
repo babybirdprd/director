@@ -2,9 +2,9 @@
 //!
 //! Handles visual output via Skia.
 //!
-// TODO(gr-793wlj): Hardware Acceleration (GPU + NVENC)
-// TODO(gr-rp79cy): Core: Motion Blur Implementation
-// TODO(gr-yje393): Core: Parallel Update & Render
+// TODO: Enable GPU-accelerated rendering and hardware video encoding for V1.
+// TODO: Implement shutter_angle and sub-frame sampling for motion blur.
+// TODO: Re-enable Rayon for parallel node updates and rendering.
 //!
 //! ## Responsibilities
 //! - **Scene Traversal**: Recursively paints `SceneNode`s to Canvas (`render_recursive`).

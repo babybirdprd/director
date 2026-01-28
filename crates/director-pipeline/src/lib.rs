@@ -1,6 +1,6 @@
-// TODO(gr-0ovb9k): Pipeline: Implement Audio Bindings
-// TODO(gr-2d1b1o): Schema: Support Global Defaults
-// TODO(gr-c8fuow): Schema: Add Z-Index Support
+// TODO: Connect director-schema audio_bindings to the core engine's FFT analyzer in director-pipeline.
+// TODO: Add support for 'default_font' and 'asset_search_paths' in MovieRequest.
+// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
 use anyhow::{Context, Result};
 use director_core::animation::{Animated, EasingType, SpringConfig as CoreSpringConfig};
 use director_core::audio::load_audio_bytes;

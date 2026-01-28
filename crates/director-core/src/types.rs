@@ -2,9 +2,9 @@
 //!
 //! Shared data types used across the engine.
 //!
-// TODO(gr-g610pf): Core: Path Animation Optimization
-// TODO(gr-lewi9j): Animation: Path Morphing
-// TODO(gr-y798dh): Animation: Perceptual Color Interpolation
+// TODO: Cache PathMeasure and total length in PathAnimationState.
+// TODO: Implement interpolation between two SVG paths (Path-A to Path-B).
+// TODO: Implement OKLab or CIELAB color interpolation to avoid 'gray dead zones'.
 //!
 //! ## Responsibilities
 //! - **Color**: RGBA color representation with Skia conversion.

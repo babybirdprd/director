@@ -1,4 +1,4 @@
-// TODO(gr-wfjmc7): Expand Visual Regression Test Coverage
+// TODO: Add more visual tests covering: text nodes, image nodes, animation states, effects.
 use director_core::{video_wrapper::RenderMode, DefaultAssetLoader, Director};
 use image::{Pixel, Rgba};
 use skia_safe::{AlphaType, ColorSpace, ColorType, EncodedImageFormat};

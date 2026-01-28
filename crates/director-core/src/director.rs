@@ -2,8 +2,8 @@
 //!
 //! The central orchestrator for the video rendering engine.
 //!
-// TODO(gr-g610pf): Core: Path Animation Optimization
-// TODO(gr-yje393): Core: Parallel Update & Render
+// TODO: Cache PathMeasure and total length in PathAnimationState.
+// TODO: Re-enable Rayon for parallel node updates and rendering.
 //!
 //! ## Responsibilities
 //! - **Timeline Management**: Maintains a `Vec<TimelineItem>` of scenes.

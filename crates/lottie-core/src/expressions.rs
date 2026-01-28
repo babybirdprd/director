@@ -1,4 +1,4 @@
-// TODO(gr-ioemua): Lottie: Feature Completion (Modifiers & Expressions)
+// TODO: Implement missing AE features: Offset Path, ZigZag (smooth), PuckerBloat, and core expressions.
 #[cfg(feature = "expressions")]
 use boa_engine::{
     context::ContextBuilder,

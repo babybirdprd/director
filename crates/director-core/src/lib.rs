@@ -2,7 +2,7 @@
 //!
 //! `director-engine` is a high-performance, frame-based 2D rendering engine designed for programmatic video generation.
 //!
-// TODO(gr-f3u4vt): Implement Benchmark Suite
+// TODO: Set up Criterion.rs benchmarks for rendering and layout.
 //!
 //! It combines a Scene Graph architecture, a flexbox-based Layout Engine ([Taffy](https://crates.io/crates/taffy)),
 //! and a high-quality Rasterizer ([Skia](https://skia.org/)) to render visual content.

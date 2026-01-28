@@ -2,8 +2,8 @@
 //!
 //! Renders Director timeline to video files (MP4).
 //!
-// TODO(gr-42zs2q): Export: GPL-Safe Transparent Video
-// TODO(gr-793wlj): Hardware Acceleration (GPU + NVENC)
+// TODO: Enable alpha-channel output using ProRes 4444 or VP9 via CLI.
+// TODO: Enable GPU-accelerated rendering and hardware video encoding for V1.
 //!
 //! ## Responsibilities
 //! - **Frame Loop**: Iterates through all frames.

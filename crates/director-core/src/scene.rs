@@ -2,8 +2,8 @@
 //!
 //! Arena-based storage for the node hierarchy.
 //!
-// TODO(gr-c8fuow): Schema: Add Z-Index Support
-// TODO(gr-g610pf): Core: Path Animation Optimization
+// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
+// TODO: Cache PathMeasure and total length in PathAnimationState.
 //!
 //! ## Responsibilities
 //! - **Node Storage**: `Vec<Option<SceneNode>>` arena with `NodeId` indices.
