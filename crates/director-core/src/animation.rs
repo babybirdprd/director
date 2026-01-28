@@ -2,6 +2,8 @@
 //!
 //! Keyframe and spring-based animation system.
 //!
+// TODO: Add spring physics animation support. SpringConfig struct with stiffness, damping, mass, velocity.
+//!
 //! ## Responsibilities
 //! - **Animated<T>**: Generic animated value with keyframe segments.
 //! - **Easing**: All easing functions (linear, ease_in_out, elastic, bounce, etc.).

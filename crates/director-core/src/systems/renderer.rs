@@ -2,6 +2,10 @@
 //!
 //! Handles visual output via Skia.
 //!
+// TODO: Enable GPU-accelerated rendering and hardware video encoding for V1.
+// TODO: Implement shutter_angle and sub-frame sampling for motion blur.
+// TODO: Re-enable Rayon for parallel node updates and rendering.
+//!
 //! ## Responsibilities
 //! - **Scene Traversal**: Recursively paints `SceneNode`s to Canvas (`render_recursive`).
 //! - **Layer Composition**: Manages canvas save/restore for transforms.

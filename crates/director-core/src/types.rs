@@ -2,6 +2,10 @@
 //!
 //! Shared data types used across the engine.
 //!
+// TODO: Cache PathMeasure and total length in PathAnimationState.
+// TODO: Implement interpolation between two SVG paths (Path-A to Path-B).
+// TODO: Implement OKLab or CIELAB color interpolation to avoid 'gray dead zones'.
+//!
 //! ## Responsibilities
 //! - **Color**: RGBA color representation with Skia conversion.
 //! - **Transform**: Animated 2D transforms (scale, rotation, translation).

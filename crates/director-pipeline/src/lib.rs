@@ -1,3 +1,6 @@
+// TODO: Connect director-schema audio_bindings to the core engine's FFT analyzer in director-pipeline.
+// TODO: Add support for 'default_font' and 'asset_search_paths' in MovieRequest.
+// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
 use anyhow::{Context, Result};
 use director_core::animation::{Animated, EasingType, SpringConfig as CoreSpringConfig};
 use director_core::audio::load_audio_bytes;

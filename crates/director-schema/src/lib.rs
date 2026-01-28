@@ -1,3 +1,7 @@
+// TODO: Connect director-schema audio_bindings to the core engine's FFT analyzer in director-pipeline.
+// TODO: Add support for 'default_font' and 'asset_search_paths' in MovieRequest.
+// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
+// TODO: Add spring physics animation support. SpringConfig struct with stiffness, damping, mass, velocity.
 use director_core::animation::{EasingType, SpringConfig};
 use director_core::types::{Color, GradientConfig};
 use serde::{Deserialize, Serialize};

@@ -2,6 +2,8 @@
 //!
 //! Audio mixing, playback, and spectrum analysis.
 //!
+// TODO: Connect director-schema audio_bindings to the core engine's FFT analyzer in director-pipeline.
+//!
 //! ## Responsibilities
 //! - **Audio Mixing**: Combines multiple `AudioTrack`s into final output.
 //! - **Scene Graph Audio**: Collects audio from scene nodes (`mix_scene_audio`).

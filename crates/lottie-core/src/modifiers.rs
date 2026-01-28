@@ -1,3 +1,4 @@
+// TODO: Implement missing AE features: Offset Path, ZigZag (smooth), PuckerBloat, and core expressions.
 use glam::Vec2 as GlamVec2;
 use kurbo::{BezPath, ParamCurve, ParamCurveArclen, ParamCurveDeriv, PathEl, Point, Vec2};
 
