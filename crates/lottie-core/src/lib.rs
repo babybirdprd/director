@@ -121,6 +121,30 @@ pub trait TextMeasurer: Send + Sync {
     fn measure(&self, text: &str, font_family: &str, size: f32) -> f32;
 }
 
+fn load_asset_bytes(asset: &data::Asset) -> Option<Vec<u8>> {
+    if let Some(p) = &asset.p {
+        if p.starts_with("data:image/") && p.contains(";base64,") {
+            let split: Vec<&str> = p.splitn(2, ',').collect();
+            if split.len() > 1 {
+                match BASE64_STANDARD.decode(split[1]) {
+                    Ok(bytes) => Some(bytes),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            }
+        } else {
+            if let Ok(bytes) = std::fs::read(p) {
+                Some(bytes)
+            } else {
+                None
+            }
+        }
+    } else {
+        None
+    }
+}
+
 /// Immutable, shared assets for a Lottie animation.
 pub struct LottieAsset {
     pub model: LottieJson,
@@ -139,13 +163,20 @@ impl LottieAsset {
         let frame_rate = model.fr;
         let duration_frames = model.op - model.ip;
 
+        let mut assets = HashMap::new();
+        for asset in &model.assets {
+            if let Some(data) = load_asset_bytes(asset) {
+                assets.insert(asset.id.clone(), ImageSource::Data(data));
+            }
+        }
+
         Self {
             model,
             width,
             height,
             duration_frames,
             _frame_rate: frame_rate,
-            assets: HashMap::new(),
+            assets,
             text_measurer: None,
         }
     }
@@ -819,30 +850,13 @@ impl<'a> SceneGraphBuilder<'a> {
                     );
                     root.content
                 } else {
-                    let data =
-                        if let Some(ImageSource::Data(bytes)) = self.asset.assets.get(&asset.id) {
-                            Some(bytes.clone())
-                        } else if let Some(p) = &asset.p {
-                            if p.starts_with("data:image/") && p.contains(";base64,") {
-                                let split: Vec<&str> = p.splitn(2, ',').collect();
-                                if split.len() > 1 {
-                                    match BASE64_STANDARD.decode(split[1]) {
-                                        Ok(bytes) => Some(bytes),
-                                        Err(_) => None,
-                                    }
-                                } else {
-                                    None
-                                }
-                            } else {
-                                if let Ok(bytes) = std::fs::read(p) {
-                                    Some(bytes)
-                                } else {
-                                    None
-                                }
-                            }
-                        } else {
-                            None
-                        };
+                    let data = if let Some(ImageSource::Data(bytes)) =
+                        self.asset.assets.get(&asset.id)
+                    {
+                        Some(bytes.clone())
+                    } else {
+                        None
+                    };
 
                     NodeContent::Image(Image {
                         data,
