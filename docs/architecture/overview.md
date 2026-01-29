@@ -9,7 +9,7 @@ This document provides a high-level overview of the internal architecture and th
 *   **LayoutEngine**: A wrapper around `Taffy` that computes Flexbox/Grid layouts for the scene graph.
 *   **AssetManager**: Thread-safe storage for heavy resources (Images, Fonts, Shaders).
 *   **Renderer**: Recursive Skia drawing logic that traverses the computed layout and draws to a Surface/Canvas.
-*   **VideoWrapper**: Encapsulates `video-rs` (ffmpeg) for encoding frames to MP4.
+*   **VideoWrapper**: Encapsulates `FFMPEG` for encoding frames to MP4.
 
 ## Frame Execution Loop
 

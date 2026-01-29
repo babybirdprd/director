@@ -3,7 +3,7 @@
 //! Video export and encoding functionality.
 //!
 //! ## Responsibilities
-//! - **Video Encoding**: FFmpeg integration via video-rs.
+//! - **Video Encoding**: FFmpeg integration via FFMPEG.
 //! - **Motion Blur**: Multi-sample frame accumulation.
 //! - **Audio Mixing**: Synchronizes audio with video frames.
 

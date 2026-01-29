@@ -37,25 +37,29 @@ Use this map to locate the correct file for a specific task.
 | **Scripting API** | `scripting/api/*.rs` | Lifecycle, nodes, animation, audio, effects, properties |
 | **Animation** | `animation.rs` | `Animated`, `EasingType`, springs |
 | **Audio** | `audio.rs` | `AudioMixer`, `AudioTrack`, `AudioAnalyzer` |
-| **Video Encoding** | `video_wrapper.rs` | FFMPEG/video-rs wrapper |
+| **Video Encoding** | `video_wrapper.rs` | FFMPEG wrapper |
 
 ### Node Types (`crates/director-core/src/node`)
 | Node | File | Use Case |
 | :--- | :--- | :--- |
 | **Box** | `box_node.rs` | Container with flexbox, borders, backgrounds |
 | **Text** | `text.rs` | Rich text rendering (SkParagraph) |
-| **Image** | `image_node.rs` | Static image display |
+| **Text Animator** | `text_animator.rs` | Kinetic typography and per-character animations |
+| **Image**| `image_node.rs` | Static image display |
 | **Video** | `video_node.rs` | Video playback |
 | **Lottie** | `lottie.rs` | Lottie animation embedding |
 | **Vector** | `vector.rs` | SVG-like vector graphics |
 | **Effect** | `effect.rs` | Visual effects/shaders |
 | **Composition** | `composition.rs` | Nested scene composition |
 
-### Schema and Pipeline (`crates/`)
+### Supporting Crates (`crates/`)
 | Responsibility | Primary File | Notes |
 | :--- | :--- | :--- |
 | **DSL Types** | `director-schema/src/lib.rs` | `NodeKind`, `StyleMap`, JSON serialization |
 | **Asset Pipeline** | `director-pipeline/src/lib.rs` | `build_node_recursive`, DSL to SceneGraph |
+| **Developer Tools** | `director-developer/src/main.rs` | Live reflection, spec generation, and monitoring |
+| **Live Preview** | `director-view/src/main.rs` | Real-time Skia window for script previewing |
+| **CLI Renderer** | `director-cli/src/main.rs` | Command-line interface for video production |
 
 ### Lottie System (`crates/lottie-*`)
 | Responsibility | Primary File | Notes |
@@ -72,42 +76,7 @@ Use this map to locate the correct file for a specific task.
 - **Taffy** — CSS Flexbox layout
 - **Skia** — 2D rasterization
 - **Rhai** — Scripting language
-- **video-rs** — FFmpeg video encoding
-
----
-
-## Workspace Structure
-
-```
-crates/
-├── director-core/       # Main engine (95% of logic)
-│   ├── src/
-│   │   ├── director.rs      # Timeline coordinator
-│   │   ├── scene.rs         # Scene graph (arena storage)
-│   │   ├── export/          # Video export pipeline
-│   │   │   ├── mod.rs
-│   │   │   └── video.rs     # render_export, FFmpeg encoding
-│   │   ├── scripting/       # Rhai API bindings (modular)
-│   │   │   ├── mod.rs       # Entry point, register_rhai_api()
-│   │   │   ├── types.rs     # Movie/Scene/Node/AudioTrack handles
-│   │   │   ├── utils.rs     # Parsers (easing, layout, colors)
-│   │   │   ├── theme.rs     # Design system tokens API
-│   │   │   └── api/         # Domain-specific registrations
-│   │   │       ├── lifecycle.rs  # Director/scene management
-│   │   │       ├── nodes.rs      # add_box, add_text, add_image, etc.
-│   │   │       ├── animation.rs  # animate, spring, path_animate
-│   │   │       ├── audio.rs      # add_audio, FFT analysis
-│   │   │       ├── effects.rs    # apply_effect, shaders
-│   │   │       └── properties.rs # set_style, set_mask, set_pivot
-│   │   ├── animation.rs     # Keyframe/spring animation
-│   │   ├── node/            # Node implementations
-│   │   └── systems/         # Renderer, Layout, Assets, Transitions
-│   └── tests/               # Integration tests
-├── director-cli/        # CLI binary
-├── director-schema/     # Schema types
-├── director-pipeline/   # Asset pipeline
-└── lottie-*/            # Lottie animation support
-```
+- **FFmpeg** — Video encoding
 
 ---
 

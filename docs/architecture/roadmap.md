@@ -42,7 +42,7 @@ We have achieved a stable architectural foundation.
 *Focus: Scaling to 4K and high framerates.*
 
 - [ ] **GPU Acceleration**: Stabilize the `vulkan` and `metal` backends for Skia to offload rasterization.
-- [ ] **Hardware Encoding**: Enable NVENC/VideoToolbox in `video-rs` for faster MP4 export.
+- [ ] **Hardware Encoding**: Enable NVENC/VideoToolbox in `FFMPEG` for faster MP4 export.
 - [ ] **Parallel Rendering**: Investigate frame-parallel rendering (rendering frame N and N+1 on separate threads) for CPU-bound workloads.
 
 ### Milestone 5: Advanced Features

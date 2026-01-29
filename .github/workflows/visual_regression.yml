@@ -19,7 +19,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        # Install FFmpeg dependencies (for video-rs) and Clang/LLVM (for skia-safe)
+        # Install FFmpeg dependencies and Clang/LLVM (for skia-safe)
         sudo apt-get install -y \
           libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev libavdevice-dev \
           clang libclang-dev llvm-dev \
