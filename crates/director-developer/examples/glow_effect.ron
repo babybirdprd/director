@@ -1,0 +1,76 @@
+// Example Feature Spec: Glow Effect
+//
+// This demonstrates the RON format for specifying cross-cutting features.
+
+FeatureSpec(
+    title: "Glow Effect",
+    
+    user_story: "As a video creator, I want to add a glow effect to nodes so that I can create neon-like visual styles for titles and UI elements.",
+    
+    priority: 2,
+    
+    // Types to include in the context (will include their JSON schemas)
+    related_types: [
+        "EffectConfig",
+        "Node",
+        "StyleMap",
+    ],
+    
+    // Rhai functions to search for (pattern matching)
+    related_functions: [
+        "effect",
+        "blur",
+        "add_",
+    ],
+    
+    // Proposed schema changes
+    schema_changes: [
+        SchemaChange(
+            target: "EffectConfig",
+            change: add_variant(
+                name: "Glow",
+                fields: [
+                    ("color", "Color"),
+                    ("radius", "f32"),
+                    ("intensity", "f32"),
+                ],
+            ),
+            default: Some("intensity: 1.0"),
+        ),
+    ],
+    
+    // Required Rhai API additions
+    scripting_requirements: [
+        ScriptingRequirement(
+            function_name: "add_glow",
+            signature: "add_glow(node_id: NodeId, color: Map, radius: f32, intensity: f32)",
+            doc_comment: Some("Adds a glow effect to the specified node."),
+        ),
+    ],
+    
+    // Pipeline implementation requirements
+    pipeline_requirements: [
+        PipelineRequirement(
+            description: "Implement Glow effect using two-pass blur with additive blending",
+            affected_area: Some("director-core/src/effects/"),
+        ),
+        PipelineRequirement(
+            description: "Add glow effect to EffectConfig match arm in apply_effect()",
+            affected_area: Some("director-pipeline/src/lib.rs"),
+        ),
+    ],
+    
+    // Verification criteria
+    verification: VerificationSpec(
+        script_compiles: true,
+        schema_validates: true,
+        custom_scripts: [
+            "examples/test_glow.rhai",
+        ],
+        test_cases: [
+            "Glow effect renders with default intensity",
+            "Glow color matches specified color",
+            "Glow radius scales correctly with node size",
+        ],
+    ),
+)

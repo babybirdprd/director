@@ -18,12 +18,13 @@
 
 use crate::animation::Animated;
 use keyframe::CanTween;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use skia_safe::{Color4f, Path};
 
 /// Specifies how the content of a replaceable element (img, video) should
 /// be resized to fit its container.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ObjectFit {
     /// The content is sized to maintain its aspect ratio while filling the element's entire content box.
     /// If the object's aspect ratio does not match the aspect ratio of its box, then the object will be clipped to fit.
@@ -88,7 +89,7 @@ impl Transform {
 // --- From element.rs ---
 
 /// Represents a RGBA color in float format (0.0 - 1.0).
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Color {
     pub r: f32,
     pub g: f32,
@@ -149,7 +150,7 @@ impl CanTween for Color {
 }
 
 /// Configuration for a linear gradient fill.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct GradientConfig {
     /// List of colors in the gradient.
     pub colors: Vec<Color>,

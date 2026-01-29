@@ -1,0 +1,56 @@
+# Task: Implement {{NODE_NAME}} Node
+
+## Context
+You are implementing a new node type for the Director video engine.
+
+## Current System Truth
+
+Run these commands to get accurate information:
+```bash
+director-dev list nodes            # See existing nodes
+director-dev list types            # See schema types
+director-dev info                  # Get system overview
+```
+
+## Implementation Checklist
+
+### 1. Schema Layer (`director-schema/src/lib.rs`)
+- [ ] Add variant to `NodeKind` enum:
+  ```rust
+  {{NODE_NAME}} {
+      src: String,
+      // Add other properties
+  }
+  ```
+- [ ] Define which properties are animatable
+
+### 2. Node Implementation (`director-core/src/node/`)
+- [ ] Create `{{node_name_lower}}.rs` with `{{NODE_NAME}}Node` struct
+- [ ] Implement `Element` trait for rendering
+- [ ] Handle layout and transforms
+
+### 3. Core Registry (`director-core/src/registry.rs`)
+- [ ] Add node to registry:
+  ```rust
+  NodeTypeInfo {
+      name: "{{NODE_NAME}}",
+      description: "{{NODE_DESCRIPTION}}",
+      supports_children: false,
+      animatable_properties: vec!["opacity", "x", "y", "scale", "rotation"],
+      features: vec![],
+  }
+  ```
+
+### 4. Scripting Layer (`director-core/src/scripting/api/nodes.rs`)
+- [ ] Add `add_{{node_name_lower}}()` Rhai function
+- [ ] Document parameters and return type
+
+### 5. Pipeline Layer (`director-pipeline/src/lib.rs`)
+- [ ] Handle new node variant in `create_node()` or equivalent
+
+## Verification
+```bash
+director-dev validate --spec specs/{{node_name_lower}}.ron
+cargo test -p director-core node
+cargo run -p director-developer -- info  # Verify node appears
+```

@@ -74,6 +74,9 @@ pub mod systems;
 /// Video export pipeline (encoding to MP4).
 pub mod export;
 
+/// Capability registry for live reflection of nodes, effects, and transitions.
+pub mod registry;
+
 pub use director::Director;
 pub use element::Element;
 pub use errors::RenderError;

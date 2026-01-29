@@ -4,9 +4,10 @@
 // TODO: Add spring physics animation support. SpringConfig struct with stiffness, damping, mass, velocity.
 use director_core::animation::{EasingType, SpringConfig};
 use director_core::types::{Color, GradientConfig};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct MovieRequest {
     pub width: u32,
     pub height: u32,
@@ -18,7 +19,7 @@ pub struct MovieRequest {
 }
 
 /// Visual transition type between scenes.
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TransitionType {
     #[default]
@@ -31,7 +32,7 @@ pub enum TransitionType {
 }
 
 /// Configuration for a scene-to-scene transition.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct TransitionConfig {
     /// Transition type
     #[serde(rename = "type")]
@@ -47,7 +48,7 @@ fn default_easing() -> EasingType {
     EasingType::Linear
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct Scene {
     pub id: String,
     pub duration_secs: f64,
@@ -58,7 +59,7 @@ pub struct Scene {
     pub transition: Option<TransitionConfig>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct Node {
     pub id: String,
     // Common properties
@@ -82,7 +83,7 @@ pub struct Node {
     pub children: Vec<Node>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum NodeKind {
     /// A simple rectangular container with optional border radius.
@@ -156,7 +157,7 @@ fn default_comp_fps() -> u32 {
 }
 
 /// Configuration for visual effects applied to nodes.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(tag = "effect", rename_all = "snake_case")]
 pub enum EffectConfig {
     /// Gaussian blur effect.
@@ -229,7 +230,7 @@ fn default_grain_size() -> f32 {
 }
 
 // Simplified Style Map for JSON (maps to Taffy later)
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, JsonSchema)]
 pub struct StyleMap {
     // Size
     pub width: Option<String>, // "100%", "50px", "auto"
@@ -335,7 +336,7 @@ pub struct StyleMap {
     pub bottom: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, JsonSchema)]
 pub struct TransformMap {
     pub x: Option<f32>,
     pub y: Option<f32>,
@@ -345,7 +346,7 @@ pub struct TransformMap {
     pub pivot_y: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct Animation {
     pub property: String, // "x", "opacity", "scale"
     pub start: Option<f32>,
@@ -355,7 +356,7 @@ pub struct Animation {
     pub easing: EasingType,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct SpringAnimation {
     pub property: String,
     pub target: f32,
@@ -365,7 +366,7 @@ pub struct SpringAnimation {
 /// Per-glyph animator for kinetic typography effects.
 ///
 /// Animates a range of text characters (graphemes) with the specified property.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct TextAnimator {
     /// Start index of the grapheme range (inclusive)
     pub start_idx: usize,
@@ -384,7 +385,7 @@ pub struct TextAnimator {
 }
 
 /// An audio track in the project.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct AudioTrack {
     /// Unique identifier for referencing in audio bindings
     pub id: String,
@@ -408,7 +409,7 @@ fn default_volume() -> f32 {
 /// Binds a node property to an audio analysis value.
 ///
 /// Enables beat-reactive visuals by mapping frequency band energy to node properties.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct AudioReactiveBinding {
     /// ID of the audio track to analyze
     pub audio_id: String,

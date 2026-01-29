@@ -1,0 +1,64 @@
+# Task: Extend Schema with {{TYPE_NAME}}
+
+## Context
+You are adding or modifying a schema type in the Director engine.
+
+## Current System Truth
+
+Run these commands to get accurate information:
+```bash
+director-dev list types            # See existing schema types
+director-dev dump --output .tmp    # Export full schemas
+cat .tmp/schemas.json | jq '.{{TYPE_NAME}}'  # View specific type
+```
+
+## Implementation Checklist
+
+### 1. Define Type (`director-schema/src/lib.rs`)
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct {{TYPE_NAME}} {
+    /// Field documentation
+    pub field_name: FieldType,
+    
+    /// Optional field with default
+    #[serde(default)]
+    pub optional_field: Option<String>,
+}
+```
+
+### 2. Add JsonSchema Derive
+Ensure the type has:
+```rust
+use schemars::JsonSchema;
+
+#[derive(JsonSchema)]
+```
+
+### 3. Register in Schema Reflector
+Add to `director-developer/src/reflectors/schema.rs`:
+```rust
+"{{TYPE_NAME}}" => Ok(serde_json::to_string_pretty(&schema_for!({{TYPE_NAME}}))?),
+```
+
+### 4. Update list_types()
+Add the type name to the returned list.
+
+## Schema Design Guidelines
+
+1. **Use serde attributes**:
+   - `#[serde(default)]` for optional fields
+   - `#[serde(rename_all = "snake_case")]` for JSON naming
+   - `#[serde(skip_serializing_if = "Option::is_none")]` for cleaner output
+
+2. **Document fields**: Add `///` docs for schema descriptions
+
+3. **Use enums for variants**: Prefer typed enums over stringly-typed fields
+
+## Verification
+```bash
+cargo check -p director-schema
+director-dev list types  # Verify type appears
+director-dev dump --output .tmp && cat .tmp/schemas.json | jq '.{{TYPE_NAME}}'
+```

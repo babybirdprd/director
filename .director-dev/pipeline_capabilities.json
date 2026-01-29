@@ -1,0 +1,250 @@
+{
+  "constraints": {
+    "audio_formats": [
+      "mp3",
+      "wav",
+      "aac"
+    ],
+    "fps_range": {
+      "max": 120,
+      "min": 1
+    },
+    "image_formats": [
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "webp"
+    ],
+    "max_audio_tracks": 16,
+    "max_nested_compositions": 10,
+    "max_resolution": {
+      "height": 4320,
+      "width": 7680
+    },
+    "video_formats": [
+      "mp4",
+      "webm"
+    ]
+  },
+  "easings": [
+    "linear",
+    "ease_in",
+    "ease_out",
+    "ease_in_out",
+    "bounce_out",
+    "bounce_in",
+    "bounce_in_out",
+    "elastic_out",
+    "elastic_in",
+    "elastic_in_out",
+    "back_out",
+    "back_in",
+    "back_in_out"
+  ],
+  "effects": [
+    {
+      "description": "Gaussian blur",
+      "name": "Blur",
+      "params": [
+        "sigma: f32"
+      ]
+    },
+    {
+      "description": "Drop shadow",
+      "name": "DropShadow",
+      "params": [
+        "blur: f32",
+        "offset_x: f32",
+        "offset_y: f32",
+        "color: Color"
+      ]
+    },
+    {
+      "description": "4x5 color transformation matrix",
+      "name": "ColorMatrix",
+      "params": [
+        "matrix: [f32; 20]"
+      ]
+    },
+    {
+      "description": "Desaturate to grayscale",
+      "name": "Grayscale",
+      "params": []
+    },
+    {
+      "description": "Sepia tone preset",
+      "name": "Sepia",
+      "params": []
+    },
+    {
+      "description": "Motion blur in a direction",
+      "name": "DirectionalBlur",
+      "params": [
+        "strength: f32",
+        "angle: f32",
+        "samples: u32"
+      ]
+    },
+    {
+      "description": "Film grain overlay",
+      "name": "FilmGrain",
+      "params": [
+        "intensity: f32",
+        "size: f32"
+      ]
+    }
+  ],
+  "layout_modes": [
+    "Flexbox",
+    "Grid"
+  ],
+  "node_types": [
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation",
+        "bg_color",
+        "border_radius"
+      ],
+      "description": "Rectangular container with optional border radius and shadow",
+      "name": "Box",
+      "supports_children": true
+    },
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation",
+        "font_size",
+        "color"
+      ],
+      "description": "Rich text with font styling and per-glyph animation",
+      "features": [
+        "per_glyph_animation",
+        "text_animators"
+      ],
+      "name": "Text",
+      "supports_children": false
+    },
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation"
+      ],
+      "description": "Static image with object-fit options",
+      "name": "Image",
+      "object_fit_modes": [
+        "cover",
+        "contain",
+        "fill"
+      ],
+      "supports_children": false
+    },
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation"
+      ],
+      "description": "Video playback with frame stepping",
+      "features": [
+        "frame_accurate_seeking",
+        "audio_extraction"
+      ],
+      "name": "Video",
+      "supports_children": false
+    },
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation",
+        "speed"
+      ],
+      "description": "Lottie JSON animation playback",
+      "features": [
+        "gpu_accelerated",
+        "dynamic_speed"
+      ],
+      "name": "Lottie",
+      "supports_children": false
+    },
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation"
+      ],
+      "description": "SVG vector graphics",
+      "name": "Vector",
+      "supports_children": false
+    },
+    {
+      "animatable_properties": [
+        "sigma",
+        "blur",
+        "intensity"
+      ],
+      "description": "Visual effect wrapper (blur, shadows, color matrix)",
+      "name": "Effect",
+      "supports_children": true
+    },
+    {
+      "animatable_properties": [
+        "opacity",
+        "x",
+        "y",
+        "scale",
+        "rotation"
+      ],
+      "description": "Nested timeline (pre-comp)",
+      "features": [
+        "time_remapping",
+        "nested_scenes"
+      ],
+      "name": "Composition",
+      "supports_children": true
+    }
+  ],
+  "transitions": [
+    {
+      "description": "Cross-dissolve between scenes",
+      "name": "Fade"
+    },
+    {
+      "description": "Slide outgoing scene left",
+      "name": "SlideLeft"
+    },
+    {
+      "description": "Slide outgoing scene right",
+      "name": "SlideRight"
+    },
+    {
+      "description": "Wipe revealing new scene from right",
+      "name": "WipeLeft"
+    },
+    {
+      "description": "Wipe revealing new scene from left",
+      "name": "WipeRight"
+    },
+    {
+      "description": "Circular reveal from center",
+      "name": "CircleOpen"
+    }
+  ]
+}

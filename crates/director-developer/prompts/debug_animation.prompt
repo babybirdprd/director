@@ -1,0 +1,71 @@
+# Task: Debug Animation Issue
+
+## Problem Description
+{{PROBLEM_DESCRIPTION}}
+
+## Current System Truth
+
+Run these commands to understand animation capabilities:
+```bash
+director-dev list nodes            # See animatable properties per node
+director-dev list functions --filter "animate"  # Animation functions
+director-dev info                  # Animation support matrix
+```
+
+## Animation System Overview
+
+### Animatable Properties by Node
+Check if the property you're animating is supported:
+```bash
+director-dev info  # Shows animation support matrix
+```
+
+Common issues:
+- Property name mismatch (e.g., `background_color` vs `bg_color`)
+- Animating unsupported properties
+- Incorrect easing function names
+
+### Animation Function Signatures
+```rhai
+// Basic animation
+animate(node_id, "property", start, end, duration, easing);
+
+// With delay
+animate(node_id, "property", start, end, duration, easing, delay);
+
+// Spring animation
+spring(node_id, "property", target, stiffness, damping);
+```
+
+## Debugging Steps
+
+### 1. Verify Node Type
+```bash
+director-dev list nodes  # Check animatable_properties for your node type
+```
+
+### 2. Verify Property Name
+Common property mappings:
+- Position: `x`, `y`
+- Size: `width`, `height` (layout properties, not directly animatable)
+- Transform: `scale`, `rotation`
+- Appearance: `opacity`, `bg_color`, `border_radius`
+
+### 3. Check Easing Names
+Valid easings:
+```
+linear, ease_in, ease_out, ease_in_out
+bounce_in, bounce_out, bounce_in_out
+elastic_in, elastic_out, elastic_in_out
+back_in, back_out, back_in_out
+```
+
+### 4. Timing Issues
+- Animations are frame-based, not wall-clock
+- Duration is in seconds
+- FPS affects apparent speed
+
+## Verification
+```bash
+cargo run -p director-cli -- render script.rhai --preview
+```

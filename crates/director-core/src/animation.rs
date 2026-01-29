@@ -15,11 +15,12 @@
 //! - `SpringConfig`: Configuration for spring animations.
 
 use keyframe::{AnimationSequence, CanTween, EasingFunction, Keyframe};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Supported easing functions for animations.
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EasingType {
     Linear,
@@ -128,7 +129,7 @@ impl EasingType {
 }
 
 /// Configuration for physics-based spring animations.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SpringConfig {
     /// Tension of the spring (controls speed).
     pub stiffness: f32,

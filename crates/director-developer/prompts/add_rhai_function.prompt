@@ -1,0 +1,58 @@
+# Task: Add {{FUNCTION_NAME}} Rhai Function
+
+## Context
+You are adding a new Rhai scripting function to the Director engine.
+
+## Current System Truth
+
+Run these commands to get accurate information:
+```bash
+director-dev list functions                    # See all functions
+director-dev list functions --filter "{{FUNCTION_NAME}}"  # Check if exists
+director-dev info                              # Get system overview
+```
+
+## Implementation Checklist
+
+### 1. Determine Module Location
+Choose based on function purpose:
+- `effects.rs` - Visual effects
+- `nodes.rs` - Node creation/modification
+- `animation.rs` - Animation functions
+- `timeline.rs` - Scene/timeline control
+- `misc.rs` - Utility functions
+
+### 2. Implement Function (`director-core/src/scripting/api/`)
+```rust
+#[rhai_fn(name = "{{function_name}}", return_raw)]
+pub fn {{function_name}}(
+    ctx: NativeCallContext,
+    // Add parameters
+) -> Result<Dynamic, Box<EvalAltResult>> {
+    // Implementation
+}
+```
+
+### 3. Register in Module
+In the appropriate module's registration:
+```rust
+module.set_native_fn("{{function_name}}", {{function_name}});
+```
+
+### 4. Document Usage
+Add docstring explaining:
+- What the function does
+- Parameter types and meanings
+- Return value
+- Example usage
+
+## Signature
+```
+{{FUNCTION_SIGNATURE}}
+```
+
+## Verification
+```bash
+cargo test -p director-core scripting
+director-dev list functions --filter "{{function_name}}"
+```

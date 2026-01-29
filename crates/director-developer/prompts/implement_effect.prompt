@@ -1,0 +1,51 @@
+# Task: Implement {{EFFECT_NAME}} Effect
+
+## Context
+You are implementing a new visual effect for the Director video engine.
+
+## Current System Truth
+
+Run these commands to get accurate information:
+```bash
+director-dev list effects          # See existing effects
+director-dev list types            # See schema types
+director-dev info                  # Get system overview
+```
+
+## Implementation Checklist
+
+### 1. Schema Layer (`director-schema/src/lib.rs`)
+- [ ] Add variant to `EffectConfig` enum:
+  ```rust
+  {{EFFECT_NAME}} {
+      // Add parameters here
+      intensity: f32,
+  }
+  ```
+- [ ] Define parameters with Serde defaults
+
+### 2. Core Layer (`director-core/src/effects/`)
+- [ ] Implement effect rendering logic
+- [ ] Register in `apply_effect` matcher
+- [ ] Add to registry in `registry.rs`:
+  ```rust
+  EffectInfo {
+      name: "{{EFFECT_NAME}}",
+      description: "{{EFFECT_DESCRIPTION}}",
+      params: vec![("intensity", "f32")],
+  }
+  ```
+
+### 3. Scripting Layer (`director-core/src/scripting/api/effects.rs`)
+- [ ] Add `add_{{effect_name_lower}}()` Rhai function
+- [ ] Document with proper signature
+
+### 4. Pipeline Layer (`director-pipeline/src/lib.rs`)
+- [ ] Handle new effect variant in node creation
+
+## Verification
+```bash
+director-dev validate --spec specs/{{effect_name_lower}}.ron
+cargo test -p director-core effect
+cargo run -p director-developer -- info  # Verify effect appears
+```

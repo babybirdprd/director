@@ -1,0 +1,1431 @@
+{
+  "modules": {
+    "theme": {
+      "functions": [
+        {
+          "baseHash": 10823839638184505608,
+          "fullHash": 15799951399039394409,
+          "namespace": "internal",
+          "access": "public",
+          "name": "border",
+          "isAnonymous": false,
+          "type": "native",
+          "numParams": 1,
+          "signature": "border(_)"
+        },
+        {
+          "baseHash": 11928850975051715257,
+          "fullHash": 16787587738842808792,
+          "namespace": "internal",
+          "access": "public",
+          "name": "radius",
+          "isAnonymous": false,
+          "type": "native",
+          "numParams": 1,
+          "signature": "radius(_)"
+        },
+        {
+          "baseHash": 11309859653528338079,
+          "fullHash": 15097761084208999934,
+          "namespace": "internal",
+          "access": "public",
+          "name": "safe_area",
+          "isAnonymous": false,
+          "type": "native",
+          "numParams": 1,
+          "signature": "safe_area(_)"
+        },
+        {
+          "baseHash": 9774593145117832484,
+          "fullHash": 14615553485406283333,
+          "namespace": "internal",
+          "access": "public",
+          "name": "space",
+          "isAnonymous": false,
+          "type": "native",
+          "numParams": 1,
+          "signature": "space(_)"
+        },
+        {
+          "baseHash": 3151511257402196012,
+          "fullHash": 7408102609064563533,
+          "namespace": "internal",
+          "access": "public",
+          "name": "z",
+          "isAnonymous": false,
+          "type": "native",
+          "numParams": 1,
+          "signature": "z(_)"
+        }
+      ]
+    }
+  },
+  "customTypes": [
+    {
+      "typeName": "director_core::scripting::types::AudioTrackHandle",
+      "displayName": "AudioTrack"
+    },
+    {
+      "typeName": "director_core::scripting::types::MovieHandle",
+      "displayName": "Movie"
+    },
+    {
+      "typeName": "director_core::scripting::types::NodeHandle",
+      "displayName": "Node"
+    },
+    {
+      "typeName": "director_core::scripting::types::SceneHandle",
+      "displayName": "Scene"
+    }
+  ],
+  "functions": [
+    {
+      "baseHash": 1224187198312611297,
+      "fullHash": 17881521139629626262,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_animator",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 8,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "add_animator(_: &mut Node, _: i64, _: i64, _: string, _: f64, _: f64, _: f64, _: string)"
+    },
+    {
+      "baseHash": 1224187198312611297,
+      "fullHash": 211841085789864883,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_animator",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 8,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "add_animator(_: &mut Node, _: i64, _: i64, _: string, _: i64, _: i64, _: f64, _: string)"
+    },
+    {
+      "baseHash": 1646442380028980565,
+      "fullHash": 15902239754409558026,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_animator",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 9,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "signature": "add_animator(_: &mut Node, _: i64, _: i64, _: string, _: f64, _: f64, _: f64, _: string, _: f64)"
+    },
+    {
+      "baseHash": 1646442380028980565,
+      "fullHash": 10821601036696403408,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_animator",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 9,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "signature": "add_animator(_: &mut Node, _: i64, _: i64, _: string, _: i64, _: i64, _: f64, _: string, _: f64)"
+    },
+    {
+      "baseHash": 7373261878033344744,
+      "fullHash": 12419609112305667650,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_audio",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "AudioTrack",
+      "signature": "add_audio(_: &mut Scene, _: string) -> AudioTrack"
+    },
+    {
+      "baseHash": 7373261878033344744,
+      "fullHash": 12000425832852194248,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_audio",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Movie"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "AudioTrack",
+      "signature": "add_audio(_: &mut Movie, _: string) -> AudioTrack"
+    },
+    {
+      "baseHash": 14996874116883319451,
+      "fullHash": 8596558586444621955,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_box",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_box(_: &mut Node, _: map) -> Node"
+    },
+    {
+      "baseHash": 14996874116883319451,
+      "fullHash": 11369922337302617102,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_box",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_box(_: &mut Scene, _: map) -> Node"
+    },
+    {
+      "baseHash": 9125124702210429788,
+      "fullHash": 466534141375754648,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_composition",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "Movie"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_composition(_: &mut Scene, _: Movie) -> Node"
+    },
+    {
+      "baseHash": 3407725063687979628,
+      "fullHash": 13765830180908369692,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_composition",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "Movie"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_composition(_: &mut Scene, _: Movie, _: map) -> Node"
+    },
+    {
+      "baseHash": 5377412088929520309,
+      "fullHash": 13734882601916367641,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_image",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_image(_: &mut Node, _: string) -> Node"
+    },
+    {
+      "baseHash": 5377412088929520309,
+      "fullHash": 9270697210763111455,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_image",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_image(_: &mut Scene, _: string) -> Node"
+    },
+    {
+      "baseHash": 14469775925142839903,
+      "fullHash": 3275048412932748080,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_image",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_image(_: &mut Node, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 14469775925142839903,
+      "fullHash": 11581607553118362750,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_image",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_image(_: &mut Scene, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 179555831177473806,
+      "fullHash": 17744626918479423138,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_lottie",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "core::result::Result<director_core::scripting::types::NodeHandle,alloc::boxed::Box<rhai::types::error::EvalAltResult>>",
+      "signature": "add_lottie(_: &mut Node, _: string) -> core::result::Result<director_core::scripting::types::NodeHandle,alloc::boxed::Box<rhai::types::error::EvalAltResult>>"
+    },
+    {
+      "baseHash": 16867201859822513482,
+      "fullHash": 1128680702732418085,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_lottie",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "core::result::Result<director_core::scripting::types::NodeHandle,alloc::boxed::Box<rhai::types::error::EvalAltResult>>",
+      "signature": "add_lottie(_: &mut Node, _: string, _: map) -> core::result::Result<director_core::scripting::types::NodeHandle,alloc::boxed::Box<rhai::types::error::EvalAltResult>>"
+    },
+    {
+      "baseHash": 16867201859822513482,
+      "fullHash": 9394663332662596459,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_lottie",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "core::result::Result<director_core::scripting::types::NodeHandle,alloc::boxed::Box<rhai::types::error::EvalAltResult>>",
+      "signature": "add_lottie(_: &mut Scene, _: string, _: map) -> core::result::Result<director_core::scripting::types::NodeHandle,alloc::boxed::Box<rhai::types::error::EvalAltResult>>"
+    },
+    {
+      "baseHash": 11848637884993244408,
+      "fullHash": 10535260068372539519,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_scene",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Movie"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "Scene",
+      "signature": "add_scene(_: &mut Movie, _: f64) -> Scene"
+    },
+    {
+      "baseHash": 6910622030755126083,
+      "fullHash": 10803906996891401705,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_svg",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_svg(_: &mut Scene, _: string) -> Node"
+    },
+    {
+      "baseHash": 6910622030755126083,
+      "fullHash": 12383503858579002095,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_svg",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_svg(_: &mut Node, _: string) -> Node"
+    },
+    {
+      "baseHash": 4870063339014580382,
+      "fullHash": 3161855635845764799,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_svg",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_svg(_: &mut Scene, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 4870063339014580382,
+      "fullHash": 11972898130177735153,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_svg",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_svg(_: &mut Node, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 7532891554342507591,
+      "fullHash": 2693074891217240786,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_text",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_text(_: &mut Scene, _: map) -> Node"
+    },
+    {
+      "baseHash": 7532891554342507591,
+      "fullHash": 14976915194274985567,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_text",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_text(_: &mut Node, _: map) -> Node"
+    },
+    {
+      "baseHash": 7358974463424969080,
+      "fullHash": 11503486428725636803,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_transition",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 6,
+      "params": [
+        {
+          "type": "&mut Movie"
+        },
+        {
+          "type": "Scene"
+        },
+        {
+          "type": "Scene"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "add_transition(_: &mut Movie, _: Scene, _: Scene, _: string, _: f64, _: string)"
+    },
+    {
+      "baseHash": 11459155000720582673,
+      "fullHash": 6129222010882166459,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_video",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_video(_: &mut Scene, _: string) -> Node"
+    },
+    {
+      "baseHash": 11459155000720582673,
+      "fullHash": 7726881718177980861,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_video",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_video(_: &mut Node, _: string) -> Node"
+    },
+    {
+      "baseHash": 9823920736222057922,
+      "fullHash": 7919620059435058349,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_video",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_video(_: &mut Node, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 9823920736222057922,
+      "fullHash": 16150270978942217187,
+      "namespace": "global",
+      "access": "public",
+      "name": "add_video",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Scene"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "add_video(_: &mut Scene, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 15673356114184036493,
+      "fullHash": 16466823762655939190,
+      "namespace": "global",
+      "access": "public",
+      "name": "animate",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 4,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "signature": "animate(_: &mut Node, _: string, _: f64, _: map)"
+    },
+    {
+      "baseHash": 11400234033111762018,
+      "fullHash": 15621570346620975257,
+      "namespace": "global",
+      "access": "public",
+      "name": "animate",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 6,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "animate(_: &mut Node, _: string, _: f64, _: f64, _: f64, _: string)"
+    },
+    {
+      "baseHash": 11400234033111762018,
+      "fullHash": 5812416766387853103,
+      "namespace": "global",
+      "access": "public",
+      "name": "animate",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 6,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "animate(_: &mut Node, _: string, _: i64, _: i64, _: f64, _: string)"
+    },
+    {
+      "baseHash": 12382681564443416132,
+      "fullHash": 12715729211310616372,
+      "namespace": "global",
+      "access": "public",
+      "name": "animate",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 7,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "signature": "animate(_: &mut Node, _: string, _: f64, _: f64, _: f64, _: string, _: f64)"
+    },
+    {
+      "baseHash": 12543947215524640685,
+      "fullHash": 17087597637419410438,
+      "namespace": "global",
+      "access": "public",
+      "name": "animate_volume",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 5,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "animate_volume(_: &mut AudioTrack, _: f64, _: f64, _: f64, _: string)"
+    },
+    {
+      "baseHash": 6709980039964322689,
+      "fullHash": 12187548126875935277,
+      "namespace": "global",
+      "access": "public",
+      "name": "apply_effect",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "apply_effect(_: &mut Node, _: string) -> Node"
+    },
+    {
+      "baseHash": 9407121389819627917,
+      "fullHash": 8265198817428094486,
+      "namespace": "global",
+      "access": "public",
+      "name": "apply_effect",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "apply_effect(_: &mut Node, _: string, _: f64) -> Node"
+    },
+    {
+      "baseHash": 9407121389819627917,
+      "fullHash": 7435857190522378466,
+      "namespace": "global",
+      "access": "public",
+      "name": "apply_effect",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Node",
+      "signature": "apply_effect(_: &mut Node, _: string, _: map) -> Node"
+    },
+    {
+      "baseHash": 11792655013695856324,
+      "fullHash": 14568673585096648641,
+      "namespace": "global",
+      "access": "public",
+      "name": "bass",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "f64",
+      "signature": "bass(_: &mut AudioTrack, _: f64) -> f64"
+    },
+    {
+      "baseHash": 3204105865472307523,
+      "fullHash": 18164407314510456933,
+      "namespace": "global",
+      "access": "public",
+      "name": "bind_audio",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 4,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "bind_audio(_: &mut Node, _: i64, _: string, _: string)"
+    },
+    {
+      "baseHash": 11050004129774024721,
+      "fullHash": 9183698290303605980,
+      "namespace": "global",
+      "access": "public",
+      "name": "configure_motion_blur",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Movie"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "signature": "configure_motion_blur(_: &mut Movie, _: i64, _: f64)"
+    },
+    {
+      "baseHash": 3192433334809024677,
+      "fullHash": 2088988390438837748,
+      "namespace": "global",
+      "access": "public",
+      "name": "destroy",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 1,
+      "params": [
+        {
+          "type": "&mut Node"
+        }
+      ],
+      "signature": "destroy(_: &mut Node)"
+    },
+    {
+      "baseHash": 10441710784934624606,
+      "fullHash": 6104961506128383951,
+      "namespace": "global",
+      "access": "public",
+      "name": "get_energy",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "returnType": "f64",
+      "signature": "get_energy(_: &mut AudioTrack, _: f64, _: string) -> f64"
+    },
+    {
+      "baseHash": 10194705028940505180,
+      "fullHash": 16497635432528107865,
+      "namespace": "global",
+      "access": "public",
+      "name": "get_spectrum",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "array",
+      "signature": "get_spectrum(_: &mut AudioTrack, _: f64) -> array"
+    },
+    {
+      "baseHash": 4099427935799601607,
+      "fullHash": 5867532591191199938,
+      "namespace": "global",
+      "access": "public",
+      "name": "highs",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "f64",
+      "signature": "highs(_: &mut AudioTrack, _: f64) -> f64"
+    },
+    {
+      "baseHash": 578234117903297727,
+      "fullHash": 15442194348112477840,
+      "namespace": "global",
+      "access": "public",
+      "name": "id",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 1,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        }
+      ],
+      "returnType": "i64",
+      "signature": "id(_: &mut AudioTrack) -> i64"
+    },
+    {
+      "baseHash": 7346853546168442210,
+      "fullHash": 899869379249775719,
+      "namespace": "global",
+      "access": "public",
+      "name": "mids",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut AudioTrack"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "f64",
+      "signature": "mids(_: &mut AudioTrack, _: f64) -> f64"
+    },
+    {
+      "baseHash": 3085517000484258590,
+      "fullHash": 5249387030060199341,
+      "namespace": "global",
+      "access": "public",
+      "name": "new_director",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        }
+      ],
+      "returnType": "Movie",
+      "signature": "new_director(_: i64, _: i64, _: i64) -> Movie"
+    },
+    {
+      "baseHash": 2091676077957117081,
+      "fullHash": 10207966894278422773,
+      "namespace": "global",
+      "access": "public",
+      "name": "new_director",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 4,
+      "params": [
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "i64"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "returnType": "Movie",
+      "signature": "new_director(_: i64, _: i64, _: i64, _: map) -> Movie"
+    },
+    {
+      "baseHash": 8248231290875556828,
+      "fullHash": 13101961705828203178,
+      "namespace": "global",
+      "access": "public",
+      "name": "path_animate",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 4,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "path_animate(_: &mut Node, _: string, _: f64, _: string)"
+    },
+    {
+      "baseHash": 5043760580602816368,
+      "fullHash": 723238257773505744,
+      "namespace": "global",
+      "access": "public",
+      "name": "rand_float",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "returnType": "f64",
+      "signature": "rand_float(_: f64, _: f64) -> f64"
+    },
+    {
+      "baseHash": 14539471133434267518,
+      "fullHash": 4466144553569046226,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_blend_mode",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "signature": "set_blend_mode(_: &mut Node, _: string)"
+    },
+    {
+      "baseHash": 10949872400715602980,
+      "fullHash": 9915024107559535658,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_blur",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "signature": "set_blur(_: &mut Node, _: f64)"
+    },
+    {
+      "baseHash": 12878228652618503557,
+      "fullHash": 15127522255255857931,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_content",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "types::dynamic::Dynamic"
+        }
+      ],
+      "signature": "set_content(_: &mut Node, _: types::dynamic::Dynamic)"
+    },
+    {
+      "baseHash": 5366661641124535462,
+      "fullHash": 18333654323537715570,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_mask",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "Node"
+        }
+      ],
+      "signature": "set_mask(_: &mut Node, _: Node)"
+    },
+    {
+      "baseHash": 3180679040970035106,
+      "fullHash": 6301931729636234367,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_pivot",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 3,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        }
+      ],
+      "signature": "set_pivot(_: &mut Node, _: f64, _: f64)"
+    },
+    {
+      "baseHash": 9471402068266507095,
+      "fullHash": 2604109789078616399,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_style",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "signature": "set_style(_: &mut Node, _: map)"
+    },
+    {
+      "baseHash": 5241627621350045901,
+      "fullHash": 12022808709630841669,
+      "namespace": "global",
+      "access": "public",
+      "name": "set_z_index",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 2,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "i64"
+        }
+      ],
+      "signature": "set_z_index(_: &mut Node, _: i64)"
+    },
+    {
+      "baseHash": 3964500844923755060,
+      "fullHash": 5505961487249254492,
+      "namespace": "global",
+      "access": "public",
+      "name": "spring",
+      "isAnonymous": false,
+      "type": "native",
+      "numParams": 5,
+      "params": [
+        {
+          "type": "&mut Node"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "f64"
+        },
+        {
+          "type": "map"
+        }
+      ],
+      "signature": "spring(_: &mut Node, _: string, _: f64, _: f64, _: map)"
+    }
+  ]
+}

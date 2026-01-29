@@ -1,0 +1,6973 @@
+{
+  "Animation": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      }
+    },
+    "properties": {
+      "duration": {
+        "format": "double",
+        "type": "number"
+      },
+      "easing": {
+        "$ref": "#/definitions/EasingType"
+      },
+      "end": {
+        "format": "float",
+        "type": "number"
+      },
+      "property": {
+        "type": "string"
+      },
+      "start": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "start_time": {
+        "format": "double",
+        "type": "number"
+      }
+    },
+    "required": [
+      "duration",
+      "easing",
+      "end",
+      "property",
+      "start_time"
+    ],
+    "title": "Animation",
+    "type": "object"
+  },
+  "AudioReactiveBinding": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "Binds a node property to an audio analysis value.\n\nEnables beat-reactive visuals by mapping frequency band energy to node properties.",
+    "properties": {
+      "audio_id": {
+        "description": "ID of the audio track to analyze",
+        "type": "string"
+      },
+      "band": {
+        "description": "Frequency band: \"bass\", \"mids\", \"highs\"",
+        "type": "string"
+      },
+      "max_value": {
+        "description": "Maximum output value (when energy is 1)",
+        "format": "float",
+        "type": "number"
+      },
+      "min_value": {
+        "description": "Minimum output value (when energy is 0)",
+        "format": "float",
+        "type": "number"
+      },
+      "property": {
+        "description": "Property to bind: \"scale\", \"opacity\", \"y\", \"x\", \"rotation\"",
+        "type": "string"
+      },
+      "smoothing": {
+        "default": 0.0,
+        "description": "Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)",
+        "format": "float",
+        "type": "number"
+      }
+    },
+    "required": [
+      "audio_id",
+      "band",
+      "max_value",
+      "min_value",
+      "property"
+    ],
+    "title": "AudioReactiveBinding",
+    "type": "object"
+  },
+  "AudioTrack": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "An audio track in the project.",
+    "properties": {
+      "id": {
+        "description": "Unique identifier for referencing in audio bindings",
+        "type": "string"
+      },
+      "loop_audio": {
+        "default": false,
+        "description": "Whether to loop the audio",
+        "type": "boolean"
+      },
+      "src": {
+        "description": "Path to audio file",
+        "type": "string"
+      },
+      "start_time": {
+        "default": 0.0,
+        "description": "Start time in seconds (global timeline)",
+        "format": "double",
+        "type": "number"
+      },
+      "volume": {
+        "default": 1.0,
+        "description": "Volume level (0.0 - 1.0)",
+        "format": "float",
+        "type": "number"
+      }
+    },
+    "required": [
+      "id",
+      "src"
+    ],
+    "title": "AudioTrack",
+    "type": "object"
+  },
+  "EffectConfig": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "Color": {
+        "description": "Represents a RGBA color in float format (0.0 - 1.0).",
+        "properties": {
+          "a": {
+            "format": "float",
+            "type": "number"
+          },
+          "b": {
+            "format": "float",
+            "type": "number"
+          },
+          "g": {
+            "format": "float",
+            "type": "number"
+          },
+          "r": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "g",
+          "r"
+        ],
+        "type": "object"
+      }
+    },
+    "description": "Configuration for visual effects applied to nodes.",
+    "oneOf": [
+      {
+        "description": "Gaussian blur effect.",
+        "properties": {
+          "effect": {
+            "enum": [
+              "blur"
+            ],
+            "type": "string"
+          },
+          "sigma": {
+            "default": 10.0,
+            "description": "Blur radius (sigma). Default: 10.0",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "Drop shadow effect.",
+        "properties": {
+          "blur": {
+            "default": 10.0,
+            "description": "Shadow blur radius. Default: 10.0",
+            "format": "float",
+            "type": "number"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Shadow color"
+          },
+          "effect": {
+            "enum": [
+              "drop_shadow"
+            ],
+            "type": "string"
+          },
+          "offset_x": {
+            "default": 0.0,
+            "description": "Horizontal offset",
+            "format": "float",
+            "type": "number"
+          },
+          "offset_y": {
+            "default": 0.0,
+            "description": "Vertical offset",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "Custom 4x5 color matrix transform (20 floats).",
+        "properties": {
+          "effect": {
+            "enum": [
+              "color_matrix"
+            ],
+            "type": "string"
+          },
+          "matrix": {
+            "description": "The 20-element color matrix [R, G, B, A, Offset] x 4 rows",
+            "items": {
+              "format": "float",
+              "type": "number"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "effect",
+          "matrix"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "Grayscale preset (convenience wrapper for ColorMatrix).",
+        "properties": {
+          "effect": {
+            "enum": [
+              "grayscale"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "Sepia tone preset (convenience wrapper for ColorMatrix).",
+        "properties": {
+          "effect": {
+            "enum": [
+              "sepia"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "Directional blur (motion blur) along an angle.",
+        "properties": {
+          "angle": {
+            "default": 0.0,
+            "description": "Direction angle in degrees (0 = right, 90 = down). Default: 0.0",
+            "format": "float",
+            "type": "number"
+          },
+          "effect": {
+            "enum": [
+              "directional_blur"
+            ],
+            "type": "string"
+          },
+          "samples": {
+            "default": 16,
+            "description": "Number of samples (quality vs performance, 4-64). Default: 16",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "strength": {
+            "default": 10.0,
+            "description": "Blur strength (pixel distance). Default: 10.0",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "Film grain / noise overlay for cinematic look.",
+        "properties": {
+          "effect": {
+            "enum": [
+              "film_grain"
+            ],
+            "type": "string"
+          },
+          "intensity": {
+            "default": 0.10000000149011612,
+            "description": "Grain intensity (0.0 - 1.0). Default: 0.1",
+            "format": "float",
+            "type": "number"
+          },
+          "size": {
+            "default": 1.0,
+            "description": "Grain size/scale in pixels. Default: 1.0",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      }
+    ],
+    "title": "EffectConfig"
+  },
+  "MovieRequest": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "Animation": {
+        "properties": {
+          "duration": {
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "$ref": "#/definitions/EasingType"
+          },
+          "end": {
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "type": "string"
+          },
+          "start": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_time": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end",
+          "property",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "AudioReactiveBinding": {
+        "description": "Binds a node property to an audio analysis value.\n\nEnables beat-reactive visuals by mapping frequency band energy to node properties.",
+        "properties": {
+          "audio_id": {
+            "description": "ID of the audio track to analyze",
+            "type": "string"
+          },
+          "band": {
+            "description": "Frequency band: \"bass\", \"mids\", \"highs\"",
+            "type": "string"
+          },
+          "max_value": {
+            "description": "Maximum output value (when energy is 1)",
+            "format": "float",
+            "type": "number"
+          },
+          "min_value": {
+            "description": "Minimum output value (when energy is 0)",
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "description": "Property to bind: \"scale\", \"opacity\", \"y\", \"x\", \"rotation\"",
+            "type": "string"
+          },
+          "smoothing": {
+            "default": 0.0,
+            "description": "Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "audio_id",
+          "band",
+          "max_value",
+          "min_value",
+          "property"
+        ],
+        "type": "object"
+      },
+      "AudioTrack": {
+        "description": "An audio track in the project.",
+        "properties": {
+          "id": {
+            "description": "Unique identifier for referencing in audio bindings",
+            "type": "string"
+          },
+          "loop_audio": {
+            "default": false,
+            "description": "Whether to loop the audio",
+            "type": "boolean"
+          },
+          "src": {
+            "description": "Path to audio file",
+            "type": "string"
+          },
+          "start_time": {
+            "default": 0.0,
+            "description": "Start time in seconds (global timeline)",
+            "format": "double",
+            "type": "number"
+          },
+          "volume": {
+            "default": 1.0,
+            "description": "Volume level (0.0 - 1.0)",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "src"
+        ],
+        "type": "object"
+      },
+      "Color": {
+        "description": "Represents a RGBA color in float format (0.0 - 1.0).",
+        "properties": {
+          "a": {
+            "format": "float",
+            "type": "number"
+          },
+          "b": {
+            "format": "float",
+            "type": "number"
+          },
+          "g": {
+            "format": "float",
+            "type": "number"
+          },
+          "r": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "g",
+          "r"
+        ],
+        "type": "object"
+      },
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      },
+      "EffectConfig": {
+        "description": "Configuration for visual effects applied to nodes.",
+        "oneOf": [
+          {
+            "description": "Gaussian blur effect.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "blur"
+                ],
+                "type": "string"
+              },
+              "sigma": {
+                "default": 10.0,
+                "description": "Blur radius (sigma). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Drop shadow effect.",
+            "properties": {
+              "blur": {
+                "default": 10.0,
+                "description": "Shadow blur radius. Default: 10.0",
+                "format": "float",
+                "type": "number"
+              },
+              "color": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Color"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Shadow color"
+              },
+              "effect": {
+                "enum": [
+                  "drop_shadow"
+                ],
+                "type": "string"
+              },
+              "offset_x": {
+                "default": 0.0,
+                "description": "Horizontal offset",
+                "format": "float",
+                "type": "number"
+              },
+              "offset_y": {
+                "default": 0.0,
+                "description": "Vertical offset",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Custom 4x5 color matrix transform (20 floats).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "color_matrix"
+                ],
+                "type": "string"
+              },
+              "matrix": {
+                "description": "The 20-element color matrix [R, G, B, A, Offset] x 4 rows",
+                "items": {
+                  "format": "float",
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "effect",
+              "matrix"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Grayscale preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "grayscale"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Sepia tone preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "sepia"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Directional blur (motion blur) along an angle.",
+            "properties": {
+              "angle": {
+                "default": 0.0,
+                "description": "Direction angle in degrees (0 = right, 90 = down). Default: 0.0",
+                "format": "float",
+                "type": "number"
+              },
+              "effect": {
+                "enum": [
+                  "directional_blur"
+                ],
+                "type": "string"
+              },
+              "samples": {
+                "default": 16,
+                "description": "Number of samples (quality vs performance, 4-64). Default: 16",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "strength": {
+                "default": 10.0,
+                "description": "Blur strength (pixel distance). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Film grain / noise overlay for cinematic look.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "film_grain"
+                ],
+                "type": "string"
+              },
+              "intensity": {
+                "default": 0.10000000149011612,
+                "description": "Grain intensity (0.0 - 1.0). Default: 0.1",
+                "format": "float",
+                "type": "number"
+              },
+              "size": {
+                "default": 1.0,
+                "description": "Grain size/scale in pixels. Default: 1.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GradientConfig": {
+        "description": "Configuration for a linear gradient fill.",
+        "properties": {
+          "colors": {
+            "description": "List of colors in the gradient.",
+            "items": {
+              "$ref": "#/definitions/Color"
+            },
+            "type": "array"
+          },
+          "end": {
+            "description": "End point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "positions": {
+            "description": "Optional positions for the color stops (0.0 to 1.0).",
+            "items": {
+              "format": "float",
+              "type": "number"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "Start point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "colors",
+          "end",
+          "start"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "oneOf": [
+          {
+            "description": "A simple rectangular container with optional border radius.",
+            "properties": {
+              "border_radius": {
+                "default": 0.0,
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "box"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A text element with content and font size.",
+            "properties": {
+              "animators": {
+                "default": [],
+                "description": "Per-glyph animators for kinetic typography",
+                "items": {
+                  "$ref": "#/definitions/TextAnimator"
+                },
+                "type": "array"
+              },
+              "content": {
+                "type": "string"
+              },
+              "font_size": {
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "text"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "content",
+              "font_size",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An image element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the image should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "image"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A video element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the video should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "video"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An SVG vector graphics element.",
+            "properties": {
+              "src": {
+                "description": "Path to SVG file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "vector"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A Lottie animation (JSON-based vector animation).",
+            "properties": {
+              "loop_animation": {
+                "default": false,
+                "description": "Whether to loop the animation",
+                "type": "boolean"
+              },
+              "speed": {
+                "default": 1.0,
+                "description": "Playback speed multiplier (default: 1.0)",
+                "format": "float",
+                "type": "number"
+              },
+              "src": {
+                "description": "Path to Lottie JSON file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "lottie"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A visual effect wrapper (blur, shadows, etc.)",
+            "properties": {
+              "effect_type": {
+                "$ref": "#/definitions/EffectConfig"
+              },
+              "type": {
+                "enum": [
+                  "effect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect_type",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A nested composition with its own timeline (pre-comp).",
+            "properties": {
+              "fps": {
+                "default": 30,
+                "description": "Frames per second",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "height": {
+                "description": "Height of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "scenes": {
+                "description": "Scenes in this composition's timeline",
+                "items": {
+                  "$ref": "#/definitions/Scene"
+                },
+                "type": "array"
+              },
+              "start_offset": {
+                "default": 0.0,
+                "description": "Time offset for when the composition starts playing (relative to parent)",
+                "format": "double",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "composition"
+                ],
+                "type": "string"
+              },
+              "width": {
+                "description": "Width of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "height",
+              "scenes",
+              "type",
+              "width"
+            ],
+            "type": "object"
+          }
+        ],
+        "properties": {
+          "animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Animation"
+            },
+            "type": "array"
+          },
+          "audio_bindings": {
+            "default": [],
+            "description": "Audio-reactive bindings for this node",
+            "items": {
+              "$ref": "#/definitions/AudioReactiveBinding"
+            },
+            "type": "array"
+          },
+          "children": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Node"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "spring_animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/SpringAnimation"
+            },
+            "type": "array"
+          },
+          "style": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/StyleMap"
+              }
+            ],
+            "default": {
+              "align_items": null,
+              "align_self": null,
+              "aspect_ratio": null,
+              "bg_color": null,
+              "bg_gradient": null,
+              "border_color": null,
+              "border_radius": null,
+              "border_width": null,
+              "bottom": null,
+              "display": null,
+              "flex_direction": null,
+              "flex_grow": null,
+              "flex_shrink": null,
+              "flex_wrap": null,
+              "gap": null,
+              "grid_column": null,
+              "grid_row": null,
+              "grid_template_columns": null,
+              "grid_template_rows": null,
+              "height": null,
+              "justify_content": null,
+              "left": null,
+              "margin": null,
+              "margin_bottom": null,
+              "margin_left": null,
+              "margin_right": null,
+              "margin_top": null,
+              "max_height": null,
+              "max_width": null,
+              "min_height": null,
+              "min_width": null,
+              "opacity": null,
+              "overflow": null,
+              "padding": null,
+              "padding_bottom": null,
+              "padding_left": null,
+              "padding_right": null,
+              "padding_top": null,
+              "position": null,
+              "right": null,
+              "safe_area": null,
+              "shadow_blur": null,
+              "shadow_color": null,
+              "shadow_x": null,
+              "shadow_y": null,
+              "top": null,
+              "width": null
+            }
+          },
+          "transform": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransformMap"
+              }
+            ],
+            "default": {
+              "pivot_x": null,
+              "pivot_y": null,
+              "rotation": null,
+              "scale": null,
+              "x": null,
+              "y": null
+            }
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "Scene": {
+        "properties": {
+          "background": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_secs": {
+            "format": "double",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "root": {
+            "$ref": "#/definitions/Node"
+          },
+          "transition": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/TransitionConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Transition to the next scene (optional)"
+          }
+        },
+        "required": [
+          "duration_secs",
+          "id",
+          "root"
+        ],
+        "type": "object"
+      },
+      "SpringAnimation": {
+        "properties": {
+          "config": {
+            "$ref": "#/definitions/SpringConfig"
+          },
+          "property": {
+            "type": "string"
+          },
+          "target": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "config",
+          "property",
+          "target"
+        ],
+        "type": "object"
+      },
+      "SpringConfig": {
+        "description": "Configuration for physics-based spring animations.",
+        "properties": {
+          "damping": {
+            "description": "Friction (controls oscillation decay).",
+            "format": "float",
+            "type": "number"
+          },
+          "mass": {
+            "description": "Mass of the object (controls inertia).",
+            "format": "float",
+            "type": "number"
+          },
+          "stiffness": {
+            "description": "Tension of the spring (controls speed).",
+            "format": "float",
+            "type": "number"
+          },
+          "velocity": {
+            "description": "Initial velocity of the animation.",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "damping",
+          "mass",
+          "stiffness",
+          "velocity"
+        ],
+        "type": "object"
+      },
+      "StyleMap": {
+        "properties": {
+          "align_items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "align_self": {
+            "description": "Align self override: \"center\", \"flex_start\", \"flex_end\", \"stretch\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aspect_ratio": {
+            "description": "Aspect ratio string: \"16:9\", \"9:16\", \"1:1\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bg_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bg_gradient": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/GradientConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Linear gradient background (overrides bg_color if present)"
+          },
+          "border_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "border_radius": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "border_width": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bottom": {
+            "description": "Inset from bottom edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "display": {
+            "description": "Layout display mode: \"flex\" (default) or \"grid\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_direction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_grow": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_shrink": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_wrap": {
+            "description": "Flex wrap: \"nowrap\" (default), \"wrap\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gap": {
+            "description": "Gap between items in pixels",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "grid_column": {
+            "description": "Grid column placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_row": {
+            "description": "Grid row placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_template_columns": {
+            "description": "Grid column definitions: [\"1fr\", \"2fr\", \"100px\", \"auto\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "grid_template_rows": {
+            "description": "Grid row definitions: [\"auto\", \"1fr\", \"200px\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "justify_content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "left": {
+            "description": "Inset from left edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opacity": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "overflow": {
+            "description": "Overflow behavior: \"visible\" (default) or \"hidden\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "padding": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "position": {
+            "description": "Layout position mode: \"relative\" (default) or \"absolute\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "right": {
+            "description": "Inset from right edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "safe_area": {
+            "description": "Safe area preset: \"tiktok\", \"youtube_shorts\", \"instagram_reel\", \"desktop\", etc. Applies platform-specific padding from DesignSystem.safe_areas",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shadow_blur": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shadow_x": {
+            "description": "Shadow X offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_y": {
+            "description": "Shadow Y offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "top": {
+            "description": "Inset from top edge (for absolute positioning)",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TextAnimator": {
+        "description": "Per-glyph animator for kinetic typography effects.\n\nAnimates a range of text characters (graphemes) with the specified property.",
+        "properties": {
+          "duration": {
+            "description": "Animation duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "description": "Easing function"
+          },
+          "end_idx": {
+            "description": "End index of the grapheme range (exclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "property": {
+            "description": "Property to animate: \"opacity\", \"offset_y\", \"offset_x\", \"scale\", \"rotation\"",
+            "type": "string"
+          },
+          "start_idx": {
+            "description": "Start index of the grapheme range (inclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "start_val": {
+            "description": "Starting value",
+            "format": "float",
+            "type": "number"
+          },
+          "target_val": {
+            "description": "Target value",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end_idx",
+          "property",
+          "start_idx",
+          "start_val",
+          "target_val"
+        ],
+        "type": "object"
+      },
+      "TransformMap": {
+        "properties": {
+          "pivot_x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pivot_y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rotation": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "scale": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TransitionConfig": {
+        "description": "Configuration for a scene-to-scene transition.",
+        "properties": {
+          "duration": {
+            "description": "Duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "default": "linear",
+            "description": "Easing function (default: Linear)"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransitionType"
+              }
+            ],
+            "description": "Transition type"
+          }
+        },
+        "required": [
+          "duration",
+          "type"
+        ],
+        "type": "object"
+      },
+      "TransitionType": {
+        "description": "Visual transition type between scenes.",
+        "enum": [
+          "fade",
+          "slide_left",
+          "slide_right",
+          "wipe_left",
+          "wipe_right",
+          "circle_open"
+        ],
+        "type": "string"
+      }
+    },
+    "properties": {
+      "audio_tracks": {
+        "default": [],
+        "description": "Global audio tracks for the movie",
+        "items": {
+          "$ref": "#/definitions/AudioTrack"
+        },
+        "type": "array"
+      },
+      "fps": {
+        "format": "uint32",
+        "minimum": 0.0,
+        "type": "integer"
+      },
+      "height": {
+        "format": "uint32",
+        "minimum": 0.0,
+        "type": "integer"
+      },
+      "scenes": {
+        "items": {
+          "$ref": "#/definitions/Scene"
+        },
+        "type": "array"
+      },
+      "width": {
+        "format": "uint32",
+        "minimum": 0.0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "fps",
+      "height",
+      "scenes",
+      "width"
+    ],
+    "title": "MovieRequest",
+    "type": "object"
+  },
+  "Node": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "Animation": {
+        "properties": {
+          "duration": {
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "$ref": "#/definitions/EasingType"
+          },
+          "end": {
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "type": "string"
+          },
+          "start": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_time": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end",
+          "property",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "AudioReactiveBinding": {
+        "description": "Binds a node property to an audio analysis value.\n\nEnables beat-reactive visuals by mapping frequency band energy to node properties.",
+        "properties": {
+          "audio_id": {
+            "description": "ID of the audio track to analyze",
+            "type": "string"
+          },
+          "band": {
+            "description": "Frequency band: \"bass\", \"mids\", \"highs\"",
+            "type": "string"
+          },
+          "max_value": {
+            "description": "Maximum output value (when energy is 1)",
+            "format": "float",
+            "type": "number"
+          },
+          "min_value": {
+            "description": "Minimum output value (when energy is 0)",
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "description": "Property to bind: \"scale\", \"opacity\", \"y\", \"x\", \"rotation\"",
+            "type": "string"
+          },
+          "smoothing": {
+            "default": 0.0,
+            "description": "Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "audio_id",
+          "band",
+          "max_value",
+          "min_value",
+          "property"
+        ],
+        "type": "object"
+      },
+      "Color": {
+        "description": "Represents a RGBA color in float format (0.0 - 1.0).",
+        "properties": {
+          "a": {
+            "format": "float",
+            "type": "number"
+          },
+          "b": {
+            "format": "float",
+            "type": "number"
+          },
+          "g": {
+            "format": "float",
+            "type": "number"
+          },
+          "r": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "g",
+          "r"
+        ],
+        "type": "object"
+      },
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      },
+      "EffectConfig": {
+        "description": "Configuration for visual effects applied to nodes.",
+        "oneOf": [
+          {
+            "description": "Gaussian blur effect.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "blur"
+                ],
+                "type": "string"
+              },
+              "sigma": {
+                "default": 10.0,
+                "description": "Blur radius (sigma). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Drop shadow effect.",
+            "properties": {
+              "blur": {
+                "default": 10.0,
+                "description": "Shadow blur radius. Default: 10.0",
+                "format": "float",
+                "type": "number"
+              },
+              "color": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Color"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Shadow color"
+              },
+              "effect": {
+                "enum": [
+                  "drop_shadow"
+                ],
+                "type": "string"
+              },
+              "offset_x": {
+                "default": 0.0,
+                "description": "Horizontal offset",
+                "format": "float",
+                "type": "number"
+              },
+              "offset_y": {
+                "default": 0.0,
+                "description": "Vertical offset",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Custom 4x5 color matrix transform (20 floats).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "color_matrix"
+                ],
+                "type": "string"
+              },
+              "matrix": {
+                "description": "The 20-element color matrix [R, G, B, A, Offset] x 4 rows",
+                "items": {
+                  "format": "float",
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "effect",
+              "matrix"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Grayscale preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "grayscale"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Sepia tone preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "sepia"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Directional blur (motion blur) along an angle.",
+            "properties": {
+              "angle": {
+                "default": 0.0,
+                "description": "Direction angle in degrees (0 = right, 90 = down). Default: 0.0",
+                "format": "float",
+                "type": "number"
+              },
+              "effect": {
+                "enum": [
+                  "directional_blur"
+                ],
+                "type": "string"
+              },
+              "samples": {
+                "default": 16,
+                "description": "Number of samples (quality vs performance, 4-64). Default: 16",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "strength": {
+                "default": 10.0,
+                "description": "Blur strength (pixel distance). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Film grain / noise overlay for cinematic look.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "film_grain"
+                ],
+                "type": "string"
+              },
+              "intensity": {
+                "default": 0.10000000149011612,
+                "description": "Grain intensity (0.0 - 1.0). Default: 0.1",
+                "format": "float",
+                "type": "number"
+              },
+              "size": {
+                "default": 1.0,
+                "description": "Grain size/scale in pixels. Default: 1.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GradientConfig": {
+        "description": "Configuration for a linear gradient fill.",
+        "properties": {
+          "colors": {
+            "description": "List of colors in the gradient.",
+            "items": {
+              "$ref": "#/definitions/Color"
+            },
+            "type": "array"
+          },
+          "end": {
+            "description": "End point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "positions": {
+            "description": "Optional positions for the color stops (0.0 to 1.0).",
+            "items": {
+              "format": "float",
+              "type": "number"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "Start point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "colors",
+          "end",
+          "start"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "oneOf": [
+          {
+            "description": "A simple rectangular container with optional border radius.",
+            "properties": {
+              "border_radius": {
+                "default": 0.0,
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "box"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A text element with content and font size.",
+            "properties": {
+              "animators": {
+                "default": [],
+                "description": "Per-glyph animators for kinetic typography",
+                "items": {
+                  "$ref": "#/definitions/TextAnimator"
+                },
+                "type": "array"
+              },
+              "content": {
+                "type": "string"
+              },
+              "font_size": {
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "text"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "content",
+              "font_size",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An image element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the image should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "image"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A video element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the video should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "video"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An SVG vector graphics element.",
+            "properties": {
+              "src": {
+                "description": "Path to SVG file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "vector"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A Lottie animation (JSON-based vector animation).",
+            "properties": {
+              "loop_animation": {
+                "default": false,
+                "description": "Whether to loop the animation",
+                "type": "boolean"
+              },
+              "speed": {
+                "default": 1.0,
+                "description": "Playback speed multiplier (default: 1.0)",
+                "format": "float",
+                "type": "number"
+              },
+              "src": {
+                "description": "Path to Lottie JSON file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "lottie"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A visual effect wrapper (blur, shadows, etc.)",
+            "properties": {
+              "effect_type": {
+                "$ref": "#/definitions/EffectConfig"
+              },
+              "type": {
+                "enum": [
+                  "effect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect_type",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A nested composition with its own timeline (pre-comp).",
+            "properties": {
+              "fps": {
+                "default": 30,
+                "description": "Frames per second",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "height": {
+                "description": "Height of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "scenes": {
+                "description": "Scenes in this composition's timeline",
+                "items": {
+                  "$ref": "#/definitions/Scene"
+                },
+                "type": "array"
+              },
+              "start_offset": {
+                "default": 0.0,
+                "description": "Time offset for when the composition starts playing (relative to parent)",
+                "format": "double",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "composition"
+                ],
+                "type": "string"
+              },
+              "width": {
+                "description": "Width of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "height",
+              "scenes",
+              "type",
+              "width"
+            ],
+            "type": "object"
+          }
+        ],
+        "properties": {
+          "animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Animation"
+            },
+            "type": "array"
+          },
+          "audio_bindings": {
+            "default": [],
+            "description": "Audio-reactive bindings for this node",
+            "items": {
+              "$ref": "#/definitions/AudioReactiveBinding"
+            },
+            "type": "array"
+          },
+          "children": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Node"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "spring_animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/SpringAnimation"
+            },
+            "type": "array"
+          },
+          "style": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/StyleMap"
+              }
+            ],
+            "default": {
+              "align_items": null,
+              "align_self": null,
+              "aspect_ratio": null,
+              "bg_color": null,
+              "bg_gradient": null,
+              "border_color": null,
+              "border_radius": null,
+              "border_width": null,
+              "bottom": null,
+              "display": null,
+              "flex_direction": null,
+              "flex_grow": null,
+              "flex_shrink": null,
+              "flex_wrap": null,
+              "gap": null,
+              "grid_column": null,
+              "grid_row": null,
+              "grid_template_columns": null,
+              "grid_template_rows": null,
+              "height": null,
+              "justify_content": null,
+              "left": null,
+              "margin": null,
+              "margin_bottom": null,
+              "margin_left": null,
+              "margin_right": null,
+              "margin_top": null,
+              "max_height": null,
+              "max_width": null,
+              "min_height": null,
+              "min_width": null,
+              "opacity": null,
+              "overflow": null,
+              "padding": null,
+              "padding_bottom": null,
+              "padding_left": null,
+              "padding_right": null,
+              "padding_top": null,
+              "position": null,
+              "right": null,
+              "safe_area": null,
+              "shadow_blur": null,
+              "shadow_color": null,
+              "shadow_x": null,
+              "shadow_y": null,
+              "top": null,
+              "width": null
+            }
+          },
+          "transform": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransformMap"
+              }
+            ],
+            "default": {
+              "pivot_x": null,
+              "pivot_y": null,
+              "rotation": null,
+              "scale": null,
+              "x": null,
+              "y": null
+            }
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "Scene": {
+        "properties": {
+          "background": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_secs": {
+            "format": "double",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "root": {
+            "$ref": "#/definitions/Node"
+          },
+          "transition": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/TransitionConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Transition to the next scene (optional)"
+          }
+        },
+        "required": [
+          "duration_secs",
+          "id",
+          "root"
+        ],
+        "type": "object"
+      },
+      "SpringAnimation": {
+        "properties": {
+          "config": {
+            "$ref": "#/definitions/SpringConfig"
+          },
+          "property": {
+            "type": "string"
+          },
+          "target": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "config",
+          "property",
+          "target"
+        ],
+        "type": "object"
+      },
+      "SpringConfig": {
+        "description": "Configuration for physics-based spring animations.",
+        "properties": {
+          "damping": {
+            "description": "Friction (controls oscillation decay).",
+            "format": "float",
+            "type": "number"
+          },
+          "mass": {
+            "description": "Mass of the object (controls inertia).",
+            "format": "float",
+            "type": "number"
+          },
+          "stiffness": {
+            "description": "Tension of the spring (controls speed).",
+            "format": "float",
+            "type": "number"
+          },
+          "velocity": {
+            "description": "Initial velocity of the animation.",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "damping",
+          "mass",
+          "stiffness",
+          "velocity"
+        ],
+        "type": "object"
+      },
+      "StyleMap": {
+        "properties": {
+          "align_items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "align_self": {
+            "description": "Align self override: \"center\", \"flex_start\", \"flex_end\", \"stretch\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aspect_ratio": {
+            "description": "Aspect ratio string: \"16:9\", \"9:16\", \"1:1\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bg_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bg_gradient": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/GradientConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Linear gradient background (overrides bg_color if present)"
+          },
+          "border_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "border_radius": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "border_width": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bottom": {
+            "description": "Inset from bottom edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "display": {
+            "description": "Layout display mode: \"flex\" (default) or \"grid\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_direction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_grow": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_shrink": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_wrap": {
+            "description": "Flex wrap: \"nowrap\" (default), \"wrap\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gap": {
+            "description": "Gap between items in pixels",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "grid_column": {
+            "description": "Grid column placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_row": {
+            "description": "Grid row placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_template_columns": {
+            "description": "Grid column definitions: [\"1fr\", \"2fr\", \"100px\", \"auto\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "grid_template_rows": {
+            "description": "Grid row definitions: [\"auto\", \"1fr\", \"200px\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "justify_content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "left": {
+            "description": "Inset from left edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opacity": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "overflow": {
+            "description": "Overflow behavior: \"visible\" (default) or \"hidden\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "padding": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "position": {
+            "description": "Layout position mode: \"relative\" (default) or \"absolute\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "right": {
+            "description": "Inset from right edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "safe_area": {
+            "description": "Safe area preset: \"tiktok\", \"youtube_shorts\", \"instagram_reel\", \"desktop\", etc. Applies platform-specific padding from DesignSystem.safe_areas",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shadow_blur": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shadow_x": {
+            "description": "Shadow X offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_y": {
+            "description": "Shadow Y offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "top": {
+            "description": "Inset from top edge (for absolute positioning)",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TextAnimator": {
+        "description": "Per-glyph animator for kinetic typography effects.\n\nAnimates a range of text characters (graphemes) with the specified property.",
+        "properties": {
+          "duration": {
+            "description": "Animation duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "description": "Easing function"
+          },
+          "end_idx": {
+            "description": "End index of the grapheme range (exclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "property": {
+            "description": "Property to animate: \"opacity\", \"offset_y\", \"offset_x\", \"scale\", \"rotation\"",
+            "type": "string"
+          },
+          "start_idx": {
+            "description": "Start index of the grapheme range (inclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "start_val": {
+            "description": "Starting value",
+            "format": "float",
+            "type": "number"
+          },
+          "target_val": {
+            "description": "Target value",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end_idx",
+          "property",
+          "start_idx",
+          "start_val",
+          "target_val"
+        ],
+        "type": "object"
+      },
+      "TransformMap": {
+        "properties": {
+          "pivot_x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pivot_y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rotation": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "scale": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TransitionConfig": {
+        "description": "Configuration for a scene-to-scene transition.",
+        "properties": {
+          "duration": {
+            "description": "Duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "default": "linear",
+            "description": "Easing function (default: Linear)"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransitionType"
+              }
+            ],
+            "description": "Transition type"
+          }
+        },
+        "required": [
+          "duration",
+          "type"
+        ],
+        "type": "object"
+      },
+      "TransitionType": {
+        "description": "Visual transition type between scenes.",
+        "enum": [
+          "fade",
+          "slide_left",
+          "slide_right",
+          "wipe_left",
+          "wipe_right",
+          "circle_open"
+        ],
+        "type": "string"
+      }
+    },
+    "oneOf": [
+      {
+        "description": "A simple rectangular container with optional border radius.",
+        "properties": {
+          "border_radius": {
+            "default": 0.0,
+            "format": "float",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "box"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A text element with content and font size.",
+        "properties": {
+          "animators": {
+            "default": [],
+            "description": "Per-glyph animators for kinetic typography",
+            "items": {
+              "$ref": "#/definitions/TextAnimator"
+            },
+            "type": "array"
+          },
+          "content": {
+            "type": "string"
+          },
+          "font_size": {
+            "format": "float",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "text"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "font_size",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "An image element loaded from a file path.",
+        "properties": {
+          "object_fit": {
+            "default": null,
+            "description": "How the image should fit within its container: \"cover\", \"contain\", \"fill\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "src": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "image"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A video element loaded from a file path.",
+        "properties": {
+          "object_fit": {
+            "default": null,
+            "description": "How the video should fit within its container: \"cover\", \"contain\", \"fill\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "src": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "video"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "An SVG vector graphics element.",
+        "properties": {
+          "src": {
+            "description": "Path to SVG file",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "vector"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A Lottie animation (JSON-based vector animation).",
+        "properties": {
+          "loop_animation": {
+            "default": false,
+            "description": "Whether to loop the animation",
+            "type": "boolean"
+          },
+          "speed": {
+            "default": 1.0,
+            "description": "Playback speed multiplier (default: 1.0)",
+            "format": "float",
+            "type": "number"
+          },
+          "src": {
+            "description": "Path to Lottie JSON file",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "lottie"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A visual effect wrapper (blur, shadows, etc.)",
+        "properties": {
+          "effect_type": {
+            "$ref": "#/definitions/EffectConfig"
+          },
+          "type": {
+            "enum": [
+              "effect"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A nested composition with its own timeline (pre-comp).",
+        "properties": {
+          "fps": {
+            "default": 30,
+            "description": "Frames per second",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "height": {
+            "description": "Height of the composition canvas",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "scenes": {
+            "description": "Scenes in this composition's timeline",
+            "items": {
+              "$ref": "#/definitions/Scene"
+            },
+            "type": "array"
+          },
+          "start_offset": {
+            "default": 0.0,
+            "description": "Time offset for when the composition starts playing (relative to parent)",
+            "format": "double",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "composition"
+            ],
+            "type": "string"
+          },
+          "width": {
+            "description": "Width of the composition canvas",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "height",
+          "scenes",
+          "type",
+          "width"
+        ],
+        "type": "object"
+      }
+    ],
+    "properties": {
+      "animations": {
+        "default": [],
+        "items": {
+          "$ref": "#/definitions/Animation"
+        },
+        "type": "array"
+      },
+      "audio_bindings": {
+        "default": [],
+        "description": "Audio-reactive bindings for this node",
+        "items": {
+          "$ref": "#/definitions/AudioReactiveBinding"
+        },
+        "type": "array"
+      },
+      "children": {
+        "default": [],
+        "items": {
+          "$ref": "#/definitions/Node"
+        },
+        "type": "array"
+      },
+      "id": {
+        "type": "string"
+      },
+      "spring_animations": {
+        "default": [],
+        "items": {
+          "$ref": "#/definitions/SpringAnimation"
+        },
+        "type": "array"
+      },
+      "style": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/StyleMap"
+          }
+        ],
+        "default": {
+          "align_items": null,
+          "align_self": null,
+          "aspect_ratio": null,
+          "bg_color": null,
+          "bg_gradient": null,
+          "border_color": null,
+          "border_radius": null,
+          "border_width": null,
+          "bottom": null,
+          "display": null,
+          "flex_direction": null,
+          "flex_grow": null,
+          "flex_shrink": null,
+          "flex_wrap": null,
+          "gap": null,
+          "grid_column": null,
+          "grid_row": null,
+          "grid_template_columns": null,
+          "grid_template_rows": null,
+          "height": null,
+          "justify_content": null,
+          "left": null,
+          "margin": null,
+          "margin_bottom": null,
+          "margin_left": null,
+          "margin_right": null,
+          "margin_top": null,
+          "max_height": null,
+          "max_width": null,
+          "min_height": null,
+          "min_width": null,
+          "opacity": null,
+          "overflow": null,
+          "padding": null,
+          "padding_bottom": null,
+          "padding_left": null,
+          "padding_right": null,
+          "padding_top": null,
+          "position": null,
+          "right": null,
+          "safe_area": null,
+          "shadow_blur": null,
+          "shadow_color": null,
+          "shadow_x": null,
+          "shadow_y": null,
+          "top": null,
+          "width": null
+        }
+      },
+      "transform": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/TransformMap"
+          }
+        ],
+        "default": {
+          "pivot_x": null,
+          "pivot_y": null,
+          "rotation": null,
+          "scale": null,
+          "x": null,
+          "y": null
+        }
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "title": "Node",
+    "type": "object"
+  },
+  "NodeKind": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "Animation": {
+        "properties": {
+          "duration": {
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "$ref": "#/definitions/EasingType"
+          },
+          "end": {
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "type": "string"
+          },
+          "start": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_time": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end",
+          "property",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "AudioReactiveBinding": {
+        "description": "Binds a node property to an audio analysis value.\n\nEnables beat-reactive visuals by mapping frequency band energy to node properties.",
+        "properties": {
+          "audio_id": {
+            "description": "ID of the audio track to analyze",
+            "type": "string"
+          },
+          "band": {
+            "description": "Frequency band: \"bass\", \"mids\", \"highs\"",
+            "type": "string"
+          },
+          "max_value": {
+            "description": "Maximum output value (when energy is 1)",
+            "format": "float",
+            "type": "number"
+          },
+          "min_value": {
+            "description": "Minimum output value (when energy is 0)",
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "description": "Property to bind: \"scale\", \"opacity\", \"y\", \"x\", \"rotation\"",
+            "type": "string"
+          },
+          "smoothing": {
+            "default": 0.0,
+            "description": "Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "audio_id",
+          "band",
+          "max_value",
+          "min_value",
+          "property"
+        ],
+        "type": "object"
+      },
+      "Color": {
+        "description": "Represents a RGBA color in float format (0.0 - 1.0).",
+        "properties": {
+          "a": {
+            "format": "float",
+            "type": "number"
+          },
+          "b": {
+            "format": "float",
+            "type": "number"
+          },
+          "g": {
+            "format": "float",
+            "type": "number"
+          },
+          "r": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "g",
+          "r"
+        ],
+        "type": "object"
+      },
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      },
+      "EffectConfig": {
+        "description": "Configuration for visual effects applied to nodes.",
+        "oneOf": [
+          {
+            "description": "Gaussian blur effect.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "blur"
+                ],
+                "type": "string"
+              },
+              "sigma": {
+                "default": 10.0,
+                "description": "Blur radius (sigma). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Drop shadow effect.",
+            "properties": {
+              "blur": {
+                "default": 10.0,
+                "description": "Shadow blur radius. Default: 10.0",
+                "format": "float",
+                "type": "number"
+              },
+              "color": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Color"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Shadow color"
+              },
+              "effect": {
+                "enum": [
+                  "drop_shadow"
+                ],
+                "type": "string"
+              },
+              "offset_x": {
+                "default": 0.0,
+                "description": "Horizontal offset",
+                "format": "float",
+                "type": "number"
+              },
+              "offset_y": {
+                "default": 0.0,
+                "description": "Vertical offset",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Custom 4x5 color matrix transform (20 floats).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "color_matrix"
+                ],
+                "type": "string"
+              },
+              "matrix": {
+                "description": "The 20-element color matrix [R, G, B, A, Offset] x 4 rows",
+                "items": {
+                  "format": "float",
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "effect",
+              "matrix"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Grayscale preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "grayscale"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Sepia tone preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "sepia"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Directional blur (motion blur) along an angle.",
+            "properties": {
+              "angle": {
+                "default": 0.0,
+                "description": "Direction angle in degrees (0 = right, 90 = down). Default: 0.0",
+                "format": "float",
+                "type": "number"
+              },
+              "effect": {
+                "enum": [
+                  "directional_blur"
+                ],
+                "type": "string"
+              },
+              "samples": {
+                "default": 16,
+                "description": "Number of samples (quality vs performance, 4-64). Default: 16",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "strength": {
+                "default": 10.0,
+                "description": "Blur strength (pixel distance). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Film grain / noise overlay for cinematic look.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "film_grain"
+                ],
+                "type": "string"
+              },
+              "intensity": {
+                "default": 0.10000000149011612,
+                "description": "Grain intensity (0.0 - 1.0). Default: 0.1",
+                "format": "float",
+                "type": "number"
+              },
+              "size": {
+                "default": 1.0,
+                "description": "Grain size/scale in pixels. Default: 1.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GradientConfig": {
+        "description": "Configuration for a linear gradient fill.",
+        "properties": {
+          "colors": {
+            "description": "List of colors in the gradient.",
+            "items": {
+              "$ref": "#/definitions/Color"
+            },
+            "type": "array"
+          },
+          "end": {
+            "description": "End point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "positions": {
+            "description": "Optional positions for the color stops (0.0 to 1.0).",
+            "items": {
+              "format": "float",
+              "type": "number"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "Start point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "colors",
+          "end",
+          "start"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "oneOf": [
+          {
+            "description": "A simple rectangular container with optional border radius.",
+            "properties": {
+              "border_radius": {
+                "default": 0.0,
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "box"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A text element with content and font size.",
+            "properties": {
+              "animators": {
+                "default": [],
+                "description": "Per-glyph animators for kinetic typography",
+                "items": {
+                  "$ref": "#/definitions/TextAnimator"
+                },
+                "type": "array"
+              },
+              "content": {
+                "type": "string"
+              },
+              "font_size": {
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "text"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "content",
+              "font_size",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An image element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the image should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "image"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A video element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the video should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "video"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An SVG vector graphics element.",
+            "properties": {
+              "src": {
+                "description": "Path to SVG file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "vector"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A Lottie animation (JSON-based vector animation).",
+            "properties": {
+              "loop_animation": {
+                "default": false,
+                "description": "Whether to loop the animation",
+                "type": "boolean"
+              },
+              "speed": {
+                "default": 1.0,
+                "description": "Playback speed multiplier (default: 1.0)",
+                "format": "float",
+                "type": "number"
+              },
+              "src": {
+                "description": "Path to Lottie JSON file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "lottie"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A visual effect wrapper (blur, shadows, etc.)",
+            "properties": {
+              "effect_type": {
+                "$ref": "#/definitions/EffectConfig"
+              },
+              "type": {
+                "enum": [
+                  "effect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect_type",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A nested composition with its own timeline (pre-comp).",
+            "properties": {
+              "fps": {
+                "default": 30,
+                "description": "Frames per second",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "height": {
+                "description": "Height of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "scenes": {
+                "description": "Scenes in this composition's timeline",
+                "items": {
+                  "$ref": "#/definitions/Scene"
+                },
+                "type": "array"
+              },
+              "start_offset": {
+                "default": 0.0,
+                "description": "Time offset for when the composition starts playing (relative to parent)",
+                "format": "double",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "composition"
+                ],
+                "type": "string"
+              },
+              "width": {
+                "description": "Width of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "height",
+              "scenes",
+              "type",
+              "width"
+            ],
+            "type": "object"
+          }
+        ],
+        "properties": {
+          "animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Animation"
+            },
+            "type": "array"
+          },
+          "audio_bindings": {
+            "default": [],
+            "description": "Audio-reactive bindings for this node",
+            "items": {
+              "$ref": "#/definitions/AudioReactiveBinding"
+            },
+            "type": "array"
+          },
+          "children": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Node"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "spring_animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/SpringAnimation"
+            },
+            "type": "array"
+          },
+          "style": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/StyleMap"
+              }
+            ],
+            "default": {
+              "align_items": null,
+              "align_self": null,
+              "aspect_ratio": null,
+              "bg_color": null,
+              "bg_gradient": null,
+              "border_color": null,
+              "border_radius": null,
+              "border_width": null,
+              "bottom": null,
+              "display": null,
+              "flex_direction": null,
+              "flex_grow": null,
+              "flex_shrink": null,
+              "flex_wrap": null,
+              "gap": null,
+              "grid_column": null,
+              "grid_row": null,
+              "grid_template_columns": null,
+              "grid_template_rows": null,
+              "height": null,
+              "justify_content": null,
+              "left": null,
+              "margin": null,
+              "margin_bottom": null,
+              "margin_left": null,
+              "margin_right": null,
+              "margin_top": null,
+              "max_height": null,
+              "max_width": null,
+              "min_height": null,
+              "min_width": null,
+              "opacity": null,
+              "overflow": null,
+              "padding": null,
+              "padding_bottom": null,
+              "padding_left": null,
+              "padding_right": null,
+              "padding_top": null,
+              "position": null,
+              "right": null,
+              "safe_area": null,
+              "shadow_blur": null,
+              "shadow_color": null,
+              "shadow_x": null,
+              "shadow_y": null,
+              "top": null,
+              "width": null
+            }
+          },
+          "transform": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransformMap"
+              }
+            ],
+            "default": {
+              "pivot_x": null,
+              "pivot_y": null,
+              "rotation": null,
+              "scale": null,
+              "x": null,
+              "y": null
+            }
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "Scene": {
+        "properties": {
+          "background": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_secs": {
+            "format": "double",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "root": {
+            "$ref": "#/definitions/Node"
+          },
+          "transition": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/TransitionConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Transition to the next scene (optional)"
+          }
+        },
+        "required": [
+          "duration_secs",
+          "id",
+          "root"
+        ],
+        "type": "object"
+      },
+      "SpringAnimation": {
+        "properties": {
+          "config": {
+            "$ref": "#/definitions/SpringConfig"
+          },
+          "property": {
+            "type": "string"
+          },
+          "target": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "config",
+          "property",
+          "target"
+        ],
+        "type": "object"
+      },
+      "SpringConfig": {
+        "description": "Configuration for physics-based spring animations.",
+        "properties": {
+          "damping": {
+            "description": "Friction (controls oscillation decay).",
+            "format": "float",
+            "type": "number"
+          },
+          "mass": {
+            "description": "Mass of the object (controls inertia).",
+            "format": "float",
+            "type": "number"
+          },
+          "stiffness": {
+            "description": "Tension of the spring (controls speed).",
+            "format": "float",
+            "type": "number"
+          },
+          "velocity": {
+            "description": "Initial velocity of the animation.",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "damping",
+          "mass",
+          "stiffness",
+          "velocity"
+        ],
+        "type": "object"
+      },
+      "StyleMap": {
+        "properties": {
+          "align_items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "align_self": {
+            "description": "Align self override: \"center\", \"flex_start\", \"flex_end\", \"stretch\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aspect_ratio": {
+            "description": "Aspect ratio string: \"16:9\", \"9:16\", \"1:1\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bg_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bg_gradient": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/GradientConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Linear gradient background (overrides bg_color if present)"
+          },
+          "border_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "border_radius": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "border_width": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bottom": {
+            "description": "Inset from bottom edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "display": {
+            "description": "Layout display mode: \"flex\" (default) or \"grid\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_direction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_grow": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_shrink": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_wrap": {
+            "description": "Flex wrap: \"nowrap\" (default), \"wrap\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gap": {
+            "description": "Gap between items in pixels",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "grid_column": {
+            "description": "Grid column placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_row": {
+            "description": "Grid row placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_template_columns": {
+            "description": "Grid column definitions: [\"1fr\", \"2fr\", \"100px\", \"auto\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "grid_template_rows": {
+            "description": "Grid row definitions: [\"auto\", \"1fr\", \"200px\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "justify_content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "left": {
+            "description": "Inset from left edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opacity": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "overflow": {
+            "description": "Overflow behavior: \"visible\" (default) or \"hidden\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "padding": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "position": {
+            "description": "Layout position mode: \"relative\" (default) or \"absolute\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "right": {
+            "description": "Inset from right edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "safe_area": {
+            "description": "Safe area preset: \"tiktok\", \"youtube_shorts\", \"instagram_reel\", \"desktop\", etc. Applies platform-specific padding from DesignSystem.safe_areas",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shadow_blur": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shadow_x": {
+            "description": "Shadow X offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_y": {
+            "description": "Shadow Y offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "top": {
+            "description": "Inset from top edge (for absolute positioning)",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TextAnimator": {
+        "description": "Per-glyph animator for kinetic typography effects.\n\nAnimates a range of text characters (graphemes) with the specified property.",
+        "properties": {
+          "duration": {
+            "description": "Animation duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "description": "Easing function"
+          },
+          "end_idx": {
+            "description": "End index of the grapheme range (exclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "property": {
+            "description": "Property to animate: \"opacity\", \"offset_y\", \"offset_x\", \"scale\", \"rotation\"",
+            "type": "string"
+          },
+          "start_idx": {
+            "description": "Start index of the grapheme range (inclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "start_val": {
+            "description": "Starting value",
+            "format": "float",
+            "type": "number"
+          },
+          "target_val": {
+            "description": "Target value",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end_idx",
+          "property",
+          "start_idx",
+          "start_val",
+          "target_val"
+        ],
+        "type": "object"
+      },
+      "TransformMap": {
+        "properties": {
+          "pivot_x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pivot_y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rotation": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "scale": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TransitionConfig": {
+        "description": "Configuration for a scene-to-scene transition.",
+        "properties": {
+          "duration": {
+            "description": "Duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "default": "linear",
+            "description": "Easing function (default: Linear)"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransitionType"
+              }
+            ],
+            "description": "Transition type"
+          }
+        },
+        "required": [
+          "duration",
+          "type"
+        ],
+        "type": "object"
+      },
+      "TransitionType": {
+        "description": "Visual transition type between scenes.",
+        "enum": [
+          "fade",
+          "slide_left",
+          "slide_right",
+          "wipe_left",
+          "wipe_right",
+          "circle_open"
+        ],
+        "type": "string"
+      }
+    },
+    "oneOf": [
+      {
+        "description": "A simple rectangular container with optional border radius.",
+        "properties": {
+          "border_radius": {
+            "default": 0.0,
+            "format": "float",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "box"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A text element with content and font size.",
+        "properties": {
+          "animators": {
+            "default": [],
+            "description": "Per-glyph animators for kinetic typography",
+            "items": {
+              "$ref": "#/definitions/TextAnimator"
+            },
+            "type": "array"
+          },
+          "content": {
+            "type": "string"
+          },
+          "font_size": {
+            "format": "float",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "text"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "font_size",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "An image element loaded from a file path.",
+        "properties": {
+          "object_fit": {
+            "default": null,
+            "description": "How the image should fit within its container: \"cover\", \"contain\", \"fill\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "src": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "image"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A video element loaded from a file path.",
+        "properties": {
+          "object_fit": {
+            "default": null,
+            "description": "How the video should fit within its container: \"cover\", \"contain\", \"fill\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "src": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "video"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "An SVG vector graphics element.",
+        "properties": {
+          "src": {
+            "description": "Path to SVG file",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "vector"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A Lottie animation (JSON-based vector animation).",
+        "properties": {
+          "loop_animation": {
+            "default": false,
+            "description": "Whether to loop the animation",
+            "type": "boolean"
+          },
+          "speed": {
+            "default": 1.0,
+            "description": "Playback speed multiplier (default: 1.0)",
+            "format": "float",
+            "type": "number"
+          },
+          "src": {
+            "description": "Path to Lottie JSON file",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "lottie"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A visual effect wrapper (blur, shadows, etc.)",
+        "properties": {
+          "effect_type": {
+            "$ref": "#/definitions/EffectConfig"
+          },
+          "type": {
+            "enum": [
+              "effect"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect_type",
+          "type"
+        ],
+        "type": "object"
+      },
+      {
+        "description": "A nested composition with its own timeline (pre-comp).",
+        "properties": {
+          "fps": {
+            "default": 30,
+            "description": "Frames per second",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "height": {
+            "description": "Height of the composition canvas",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "scenes": {
+            "description": "Scenes in this composition's timeline",
+            "items": {
+              "$ref": "#/definitions/Scene"
+            },
+            "type": "array"
+          },
+          "start_offset": {
+            "default": 0.0,
+            "description": "Time offset for when the composition starts playing (relative to parent)",
+            "format": "double",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "composition"
+            ],
+            "type": "string"
+          },
+          "width": {
+            "description": "Width of the composition canvas",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "height",
+          "scenes",
+          "type",
+          "width"
+        ],
+        "type": "object"
+      }
+    ],
+    "title": "NodeKind"
+  },
+  "Scene": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "Animation": {
+        "properties": {
+          "duration": {
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "$ref": "#/definitions/EasingType"
+          },
+          "end": {
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "type": "string"
+          },
+          "start": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_time": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end",
+          "property",
+          "start_time"
+        ],
+        "type": "object"
+      },
+      "AudioReactiveBinding": {
+        "description": "Binds a node property to an audio analysis value.\n\nEnables beat-reactive visuals by mapping frequency band energy to node properties.",
+        "properties": {
+          "audio_id": {
+            "description": "ID of the audio track to analyze",
+            "type": "string"
+          },
+          "band": {
+            "description": "Frequency band: \"bass\", \"mids\", \"highs\"",
+            "type": "string"
+          },
+          "max_value": {
+            "description": "Maximum output value (when energy is 1)",
+            "format": "float",
+            "type": "number"
+          },
+          "min_value": {
+            "description": "Minimum output value (when energy is 0)",
+            "format": "float",
+            "type": "number"
+          },
+          "property": {
+            "description": "Property to bind: \"scale\", \"opacity\", \"y\", \"x\", \"rotation\"",
+            "type": "string"
+          },
+          "smoothing": {
+            "default": 0.0,
+            "description": "Smoothing factor (0.0 = instant, 0.9 = heavy smoothing)",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "audio_id",
+          "band",
+          "max_value",
+          "min_value",
+          "property"
+        ],
+        "type": "object"
+      },
+      "Color": {
+        "description": "Represents a RGBA color in float format (0.0 - 1.0).",
+        "properties": {
+          "a": {
+            "format": "float",
+            "type": "number"
+          },
+          "b": {
+            "format": "float",
+            "type": "number"
+          },
+          "g": {
+            "format": "float",
+            "type": "number"
+          },
+          "r": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "g",
+          "r"
+        ],
+        "type": "object"
+      },
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      },
+      "EffectConfig": {
+        "description": "Configuration for visual effects applied to nodes.",
+        "oneOf": [
+          {
+            "description": "Gaussian blur effect.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "blur"
+                ],
+                "type": "string"
+              },
+              "sigma": {
+                "default": 10.0,
+                "description": "Blur radius (sigma). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Drop shadow effect.",
+            "properties": {
+              "blur": {
+                "default": 10.0,
+                "description": "Shadow blur radius. Default: 10.0",
+                "format": "float",
+                "type": "number"
+              },
+              "color": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Color"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Shadow color"
+              },
+              "effect": {
+                "enum": [
+                  "drop_shadow"
+                ],
+                "type": "string"
+              },
+              "offset_x": {
+                "default": 0.0,
+                "description": "Horizontal offset",
+                "format": "float",
+                "type": "number"
+              },
+              "offset_y": {
+                "default": 0.0,
+                "description": "Vertical offset",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Custom 4x5 color matrix transform (20 floats).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "color_matrix"
+                ],
+                "type": "string"
+              },
+              "matrix": {
+                "description": "The 20-element color matrix [R, G, B, A, Offset] x 4 rows",
+                "items": {
+                  "format": "float",
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "effect",
+              "matrix"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Grayscale preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "grayscale"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Sepia tone preset (convenience wrapper for ColorMatrix).",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "sepia"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Directional blur (motion blur) along an angle.",
+            "properties": {
+              "angle": {
+                "default": 0.0,
+                "description": "Direction angle in degrees (0 = right, 90 = down). Default: 0.0",
+                "format": "float",
+                "type": "number"
+              },
+              "effect": {
+                "enum": [
+                  "directional_blur"
+                ],
+                "type": "string"
+              },
+              "samples": {
+                "default": 16,
+                "description": "Number of samples (quality vs performance, 4-64). Default: 16",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "strength": {
+                "default": 10.0,
+                "description": "Blur strength (pixel distance). Default: 10.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Film grain / noise overlay for cinematic look.",
+            "properties": {
+              "effect": {
+                "enum": [
+                  "film_grain"
+                ],
+                "type": "string"
+              },
+              "intensity": {
+                "default": 0.10000000149011612,
+                "description": "Grain intensity (0.0 - 1.0). Default: 0.1",
+                "format": "float",
+                "type": "number"
+              },
+              "size": {
+                "default": 1.0,
+                "description": "Grain size/scale in pixels. Default: 1.0",
+                "format": "float",
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GradientConfig": {
+        "description": "Configuration for a linear gradient fill.",
+        "properties": {
+          "colors": {
+            "description": "List of colors in the gradient.",
+            "items": {
+              "$ref": "#/definitions/Color"
+            },
+            "type": "array"
+          },
+          "end": {
+            "description": "End point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "positions": {
+            "description": "Optional positions for the color stops (0.0 to 1.0).",
+            "items": {
+              "format": "float",
+              "type": "number"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "Start point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "colors",
+          "end",
+          "start"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "oneOf": [
+          {
+            "description": "A simple rectangular container with optional border radius.",
+            "properties": {
+              "border_radius": {
+                "default": 0.0,
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "box"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A text element with content and font size.",
+            "properties": {
+              "animators": {
+                "default": [],
+                "description": "Per-glyph animators for kinetic typography",
+                "items": {
+                  "$ref": "#/definitions/TextAnimator"
+                },
+                "type": "array"
+              },
+              "content": {
+                "type": "string"
+              },
+              "font_size": {
+                "format": "float",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "text"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "content",
+              "font_size",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An image element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the image should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "image"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A video element loaded from a file path.",
+            "properties": {
+              "object_fit": {
+                "default": null,
+                "description": "How the video should fit within its container: \"cover\", \"contain\", \"fill\"",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "video"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An SVG vector graphics element.",
+            "properties": {
+              "src": {
+                "description": "Path to SVG file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "vector"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A Lottie animation (JSON-based vector animation).",
+            "properties": {
+              "loop_animation": {
+                "default": false,
+                "description": "Whether to loop the animation",
+                "type": "boolean"
+              },
+              "speed": {
+                "default": 1.0,
+                "description": "Playback speed multiplier (default: 1.0)",
+                "format": "float",
+                "type": "number"
+              },
+              "src": {
+                "description": "Path to Lottie JSON file",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "lottie"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A visual effect wrapper (blur, shadows, etc.)",
+            "properties": {
+              "effect_type": {
+                "$ref": "#/definitions/EffectConfig"
+              },
+              "type": {
+                "enum": [
+                  "effect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect_type",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A nested composition with its own timeline (pre-comp).",
+            "properties": {
+              "fps": {
+                "default": 30,
+                "description": "Frames per second",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "height": {
+                "description": "Height of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "scenes": {
+                "description": "Scenes in this composition's timeline",
+                "items": {
+                  "$ref": "#/definitions/Scene"
+                },
+                "type": "array"
+              },
+              "start_offset": {
+                "default": 0.0,
+                "description": "Time offset for when the composition starts playing (relative to parent)",
+                "format": "double",
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "composition"
+                ],
+                "type": "string"
+              },
+              "width": {
+                "description": "Width of the composition canvas",
+                "format": "uint32",
+                "minimum": 0.0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "height",
+              "scenes",
+              "type",
+              "width"
+            ],
+            "type": "object"
+          }
+        ],
+        "properties": {
+          "animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Animation"
+            },
+            "type": "array"
+          },
+          "audio_bindings": {
+            "default": [],
+            "description": "Audio-reactive bindings for this node",
+            "items": {
+              "$ref": "#/definitions/AudioReactiveBinding"
+            },
+            "type": "array"
+          },
+          "children": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/Node"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "spring_animations": {
+            "default": [],
+            "items": {
+              "$ref": "#/definitions/SpringAnimation"
+            },
+            "type": "array"
+          },
+          "style": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/StyleMap"
+              }
+            ],
+            "default": {
+              "align_items": null,
+              "align_self": null,
+              "aspect_ratio": null,
+              "bg_color": null,
+              "bg_gradient": null,
+              "border_color": null,
+              "border_radius": null,
+              "border_width": null,
+              "bottom": null,
+              "display": null,
+              "flex_direction": null,
+              "flex_grow": null,
+              "flex_shrink": null,
+              "flex_wrap": null,
+              "gap": null,
+              "grid_column": null,
+              "grid_row": null,
+              "grid_template_columns": null,
+              "grid_template_rows": null,
+              "height": null,
+              "justify_content": null,
+              "left": null,
+              "margin": null,
+              "margin_bottom": null,
+              "margin_left": null,
+              "margin_right": null,
+              "margin_top": null,
+              "max_height": null,
+              "max_width": null,
+              "min_height": null,
+              "min_width": null,
+              "opacity": null,
+              "overflow": null,
+              "padding": null,
+              "padding_bottom": null,
+              "padding_left": null,
+              "padding_right": null,
+              "padding_top": null,
+              "position": null,
+              "right": null,
+              "safe_area": null,
+              "shadow_blur": null,
+              "shadow_color": null,
+              "shadow_x": null,
+              "shadow_y": null,
+              "top": null,
+              "width": null
+            }
+          },
+          "transform": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransformMap"
+              }
+            ],
+            "default": {
+              "pivot_x": null,
+              "pivot_y": null,
+              "rotation": null,
+              "scale": null,
+              "x": null,
+              "y": null
+            }
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "Scene": {
+        "properties": {
+          "background": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_secs": {
+            "format": "double",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "root": {
+            "$ref": "#/definitions/Node"
+          },
+          "transition": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/TransitionConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Transition to the next scene (optional)"
+          }
+        },
+        "required": [
+          "duration_secs",
+          "id",
+          "root"
+        ],
+        "type": "object"
+      },
+      "SpringAnimation": {
+        "properties": {
+          "config": {
+            "$ref": "#/definitions/SpringConfig"
+          },
+          "property": {
+            "type": "string"
+          },
+          "target": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "config",
+          "property",
+          "target"
+        ],
+        "type": "object"
+      },
+      "SpringConfig": {
+        "description": "Configuration for physics-based spring animations.",
+        "properties": {
+          "damping": {
+            "description": "Friction (controls oscillation decay).",
+            "format": "float",
+            "type": "number"
+          },
+          "mass": {
+            "description": "Mass of the object (controls inertia).",
+            "format": "float",
+            "type": "number"
+          },
+          "stiffness": {
+            "description": "Tension of the spring (controls speed).",
+            "format": "float",
+            "type": "number"
+          },
+          "velocity": {
+            "description": "Initial velocity of the animation.",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "damping",
+          "mass",
+          "stiffness",
+          "velocity"
+        ],
+        "type": "object"
+      },
+      "StyleMap": {
+        "properties": {
+          "align_items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "align_self": {
+            "description": "Align self override: \"center\", \"flex_start\", \"flex_end\", \"stretch\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aspect_ratio": {
+            "description": "Aspect ratio string: \"16:9\", \"9:16\", \"1:1\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bg_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bg_gradient": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/GradientConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Linear gradient background (overrides bg_color if present)"
+          },
+          "border_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "border_radius": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "border_width": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bottom": {
+            "description": "Inset from bottom edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "display": {
+            "description": "Layout display mode: \"flex\" (default) or \"grid\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_direction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flex_grow": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_shrink": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "flex_wrap": {
+            "description": "Flex wrap: \"nowrap\" (default), \"wrap\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gap": {
+            "description": "Gap between items in pixels",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "grid_column": {
+            "description": "Grid column placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_row": {
+            "description": "Grid row placement: \"1\", \"1 / 3\", \"span 2\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grid_template_columns": {
+            "description": "Grid column definitions: [\"1fr\", \"2fr\", \"100px\", \"auto\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "grid_template_rows": {
+            "description": "Grid row definitions: [\"auto\", \"1fr\", \"200px\"]",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "justify_content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "left": {
+            "description": "Inset from left edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "margin_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_height": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opacity": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "overflow": {
+            "description": "Overflow behavior: \"visible\" (default) or \"hidden\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "padding": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_bottom": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_left": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_right": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "padding_top": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "position": {
+            "description": "Layout position mode: \"relative\" (default) or \"absolute\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "right": {
+            "description": "Inset from right edge",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "safe_area": {
+            "description": "Safe area preset: \"tiktok\", \"youtube_shorts\", \"instagram_reel\", \"desktop\", etc. Applies platform-specific padding from DesignSystem.safe_areas",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shadow_blur": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_color": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shadow_x": {
+            "description": "Shadow X offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shadow_y": {
+            "description": "Shadow Y offset",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "top": {
+            "description": "Inset from top edge (for absolute positioning)",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "width": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TextAnimator": {
+        "description": "Per-glyph animator for kinetic typography effects.\n\nAnimates a range of text characters (graphemes) with the specified property.",
+        "properties": {
+          "duration": {
+            "description": "Animation duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "description": "Easing function"
+          },
+          "end_idx": {
+            "description": "End index of the grapheme range (exclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "property": {
+            "description": "Property to animate: \"opacity\", \"offset_y\", \"offset_x\", \"scale\", \"rotation\"",
+            "type": "string"
+          },
+          "start_idx": {
+            "description": "Start index of the grapheme range (inclusive)",
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "start_val": {
+            "description": "Starting value",
+            "format": "float",
+            "type": "number"
+          },
+          "target_val": {
+            "description": "Target value",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "duration",
+          "easing",
+          "end_idx",
+          "property",
+          "start_idx",
+          "start_val",
+          "target_val"
+        ],
+        "type": "object"
+      },
+      "TransformMap": {
+        "properties": {
+          "pivot_x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pivot_y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rotation": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "scale": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "x": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "y": {
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TransitionConfig": {
+        "description": "Configuration for a scene-to-scene transition.",
+        "properties": {
+          "duration": {
+            "description": "Duration in seconds",
+            "format": "double",
+            "type": "number"
+          },
+          "easing": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/EasingType"
+              }
+            ],
+            "default": "linear",
+            "description": "Easing function (default: Linear)"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/TransitionType"
+              }
+            ],
+            "description": "Transition type"
+          }
+        },
+        "required": [
+          "duration",
+          "type"
+        ],
+        "type": "object"
+      },
+      "TransitionType": {
+        "description": "Visual transition type between scenes.",
+        "enum": [
+          "fade",
+          "slide_left",
+          "slide_right",
+          "wipe_left",
+          "wipe_right",
+          "circle_open"
+        ],
+        "type": "string"
+      }
+    },
+    "properties": {
+      "background": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Color"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "duration_secs": {
+        "format": "double",
+        "type": "number"
+      },
+      "id": {
+        "type": "string"
+      },
+      "root": {
+        "$ref": "#/definitions/Node"
+      },
+      "transition": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/TransitionConfig"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Transition to the next scene (optional)"
+      }
+    },
+    "required": [
+      "duration_secs",
+      "id",
+      "root"
+    ],
+    "title": "Scene",
+    "type": "object"
+  },
+  "SpringAnimation": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "SpringConfig": {
+        "description": "Configuration for physics-based spring animations.",
+        "properties": {
+          "damping": {
+            "description": "Friction (controls oscillation decay).",
+            "format": "float",
+            "type": "number"
+          },
+          "mass": {
+            "description": "Mass of the object (controls inertia).",
+            "format": "float",
+            "type": "number"
+          },
+          "stiffness": {
+            "description": "Tension of the spring (controls speed).",
+            "format": "float",
+            "type": "number"
+          },
+          "velocity": {
+            "description": "Initial velocity of the animation.",
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "damping",
+          "mass",
+          "stiffness",
+          "velocity"
+        ],
+        "type": "object"
+      }
+    },
+    "properties": {
+      "config": {
+        "$ref": "#/definitions/SpringConfig"
+      },
+      "property": {
+        "type": "string"
+      },
+      "target": {
+        "format": "float",
+        "type": "number"
+      }
+    },
+    "required": [
+      "config",
+      "property",
+      "target"
+    ],
+    "title": "SpringAnimation",
+    "type": "object"
+  },
+  "StyleMap": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "Color": {
+        "description": "Represents a RGBA color in float format (0.0 - 1.0).",
+        "properties": {
+          "a": {
+            "format": "float",
+            "type": "number"
+          },
+          "b": {
+            "format": "float",
+            "type": "number"
+          },
+          "g": {
+            "format": "float",
+            "type": "number"
+          },
+          "r": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "g",
+          "r"
+        ],
+        "type": "object"
+      },
+      "GradientConfig": {
+        "description": "Configuration for a linear gradient fill.",
+        "properties": {
+          "colors": {
+            "description": "List of colors in the gradient.",
+            "items": {
+              "$ref": "#/definitions/Color"
+            },
+            "type": "array"
+          },
+          "end": {
+            "description": "End point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "positions": {
+            "description": "Optional positions for the color stops (0.0 to 1.0).",
+            "items": {
+              "format": "float",
+              "type": "number"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "Start point of the gradient (Relative coordinates 0.0 to 1.0).",
+            "items": [
+              {
+                "format": "float",
+                "type": "number"
+              },
+              {
+                "format": "float",
+                "type": "number"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "colors",
+          "end",
+          "start"
+        ],
+        "type": "object"
+      }
+    },
+    "properties": {
+      "align_items": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "align_self": {
+        "description": "Align self override: \"center\", \"flex_start\", \"flex_end\", \"stretch\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "aspect_ratio": {
+        "description": "Aspect ratio string: \"16:9\", \"9:16\", \"1:1\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "bg_color": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Color"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "bg_gradient": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/GradientConfig"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Linear gradient background (overrides bg_color if present)"
+      },
+      "border_color": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Color"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "border_radius": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "border_width": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "bottom": {
+        "description": "Inset from bottom edge",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "display": {
+        "description": "Layout display mode: \"flex\" (default) or \"grid\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "flex_direction": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "flex_grow": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "flex_shrink": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "flex_wrap": {
+        "description": "Flex wrap: \"nowrap\" (default), \"wrap\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "gap": {
+        "description": "Gap between items in pixels",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "grid_column": {
+        "description": "Grid column placement: \"1\", \"1 / 3\", \"span 2\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "grid_row": {
+        "description": "Grid row placement: \"1\", \"1 / 3\", \"span 2\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "grid_template_columns": {
+        "description": "Grid column definitions: [\"1fr\", \"2fr\", \"100px\", \"auto\"]",
+        "items": {
+          "type": "string"
+        },
+        "type": [
+          "array",
+          "null"
+        ]
+      },
+      "grid_template_rows": {
+        "description": "Grid row definitions: [\"auto\", \"1fr\", \"200px\"]",
+        "items": {
+          "type": "string"
+        },
+        "type": [
+          "array",
+          "null"
+        ]
+      },
+      "height": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "justify_content": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "left": {
+        "description": "Inset from left edge",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "margin": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "margin_bottom": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "margin_left": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "margin_right": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "margin_top": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "max_height": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "max_width": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "min_height": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "min_width": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "opacity": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "overflow": {
+        "description": "Overflow behavior: \"visible\" (default) or \"hidden\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "padding": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "padding_bottom": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "padding_left": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "padding_right": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "padding_top": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "position": {
+        "description": "Layout position mode: \"relative\" (default) or \"absolute\"",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "right": {
+        "description": "Inset from right edge",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "safe_area": {
+        "description": "Safe area preset: \"tiktok\", \"youtube_shorts\", \"instagram_reel\", \"desktop\", etc. Applies platform-specific padding from DesignSystem.safe_areas",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "shadow_blur": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "shadow_color": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Color"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "shadow_x": {
+        "description": "Shadow X offset",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "shadow_y": {
+        "description": "Shadow Y offset",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "top": {
+        "description": "Inset from top edge (for absolute positioning)",
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "width": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "title": "StyleMap",
+    "type": "object"
+  },
+  "TextAnimator": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      }
+    },
+    "description": "Per-glyph animator for kinetic typography effects.\n\nAnimates a range of text characters (graphemes) with the specified property.",
+    "properties": {
+      "duration": {
+        "description": "Animation duration in seconds",
+        "format": "double",
+        "type": "number"
+      },
+      "easing": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/EasingType"
+          }
+        ],
+        "description": "Easing function"
+      },
+      "end_idx": {
+        "description": "End index of the grapheme range (exclusive)",
+        "format": "uint",
+        "minimum": 0.0,
+        "type": "integer"
+      },
+      "property": {
+        "description": "Property to animate: \"opacity\", \"offset_y\", \"offset_x\", \"scale\", \"rotation\"",
+        "type": "string"
+      },
+      "start_idx": {
+        "description": "Start index of the grapheme range (inclusive)",
+        "format": "uint",
+        "minimum": 0.0,
+        "type": "integer"
+      },
+      "start_val": {
+        "description": "Starting value",
+        "format": "float",
+        "type": "number"
+      },
+      "target_val": {
+        "description": "Target value",
+        "format": "float",
+        "type": "number"
+      }
+    },
+    "required": [
+      "duration",
+      "easing",
+      "end_idx",
+      "property",
+      "start_idx",
+      "start_val",
+      "target_val"
+    ],
+    "title": "TextAnimator",
+    "type": "object"
+  },
+  "TransformMap": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "pivot_x": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "pivot_y": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "rotation": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "scale": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "x": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "y": {
+        "format": "float",
+        "type": [
+          "number",
+          "null"
+        ]
+      }
+    },
+    "title": "TransformMap",
+    "type": "object"
+  },
+  "TransitionConfig": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+      "EasingType": {
+        "description": "Supported easing functions for animations.",
+        "enum": [
+          "linear",
+          "ease_in",
+          "ease_out",
+          "ease_in_out",
+          "bounce_out",
+          "bounce_in",
+          "bounce_in_out",
+          "elastic_out",
+          "elastic_in",
+          "elastic_in_out",
+          "back_out",
+          "back_in",
+          "back_in_out"
+        ],
+        "type": "string"
+      },
+      "TransitionType": {
+        "description": "Visual transition type between scenes.",
+        "enum": [
+          "fade",
+          "slide_left",
+          "slide_right",
+          "wipe_left",
+          "wipe_right",
+          "circle_open"
+        ],
+        "type": "string"
+      }
+    },
+    "description": "Configuration for a scene-to-scene transition.",
+    "properties": {
+      "duration": {
+        "description": "Duration in seconds",
+        "format": "double",
+        "type": "number"
+      },
+      "easing": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/EasingType"
+          }
+        ],
+        "default": "linear",
+        "description": "Easing function (default: Linear)"
+      },
+      "type": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/TransitionType"
+          }
+        ],
+        "description": "Transition type"
+      }
+    },
+    "required": [
+      "duration",
+      "type"
+    ],
+    "title": "TransitionConfig",
+    "type": "object"
+  },
+  "TransitionType": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "Visual transition type between scenes.",
+    "enum": [
+      "fade",
+      "slide_left",
+      "slide_right",
+      "wipe_left",
+      "wipe_right",
+      "circle_open"
+    ],
+    "title": "TransitionType",
+    "type": "string"
+  }
+}
