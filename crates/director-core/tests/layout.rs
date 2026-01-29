@@ -158,12 +158,17 @@ fn layout_structure_snapshot() {
     }
 
     let expected = fs::read_to_string(&snapshot_path).expect("Failed to read snapshot");
+
+    // Normalize line endings to avoid cross-platform issues
+    let actual_normalized = actual.replace("\r\n", "\n");
+    let expected_normalized = expected.replace("\r\n", "\n");
+
     assert_eq!(
-        actual.trim(),
-        expected.trim(),
+        actual_normalized.trim(),
+        expected_normalized.trim(),
         "Layout structure mismatch!\nActual:\n{}\nExpected:\n{}",
-        actual,
-        expected
+        actual_normalized,
+        expected_normalized
     );
 }
 
