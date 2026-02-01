@@ -2,7 +2,6 @@
 //!
 //! The central orchestrator for the video rendering engine.
 //!
-// TODO: Cache PathMeasure and total length in PathAnimationState.
 // TODO: Re-enable Rayon for parallel node updates and rendering.
 //!
 //! ## Responsibilities
@@ -21,10 +20,9 @@ use crate::scene::SceneGraph;
 use crate::systems::assets::AssetManager;
 use crate::systems::transitions::Transition;
 use crate::types::NodeId;
-use crate::video_wrapper::RenderMode;
+use crate::video_wrapper::{EncoderMode, RenderMode};
 use crate::AssetLoader;
 use skia_safe::textlayout::{FontCollection, TypefaceFontProvider};
-use skia_safe::PathMeasure;
 use skia_safe::{Data, FontMgr};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -81,6 +79,8 @@ pub struct Director {
     pub audio_analyzer: AudioAnalyzer,
     /// Shared Asset Manager.
     pub assets: AssetManager,
+    /// Video encoder mode (hardware acceleration).
+    pub encoder_mode: EncoderMode,
 }
 
 /// SAFETY: Director is not thread-safe due to Skia internals (RefCounts).
@@ -150,6 +150,7 @@ impl Director {
             audio_mixer: AudioMixer::new(48000),
             audio_analyzer: AudioAnalyzer::new(2048, 48000),
             assets,
+            encoder_mode: EncoderMode::Auto, // Default to auto-detect hardware
         }
     }
 
@@ -264,15 +265,18 @@ impl Director {
                     node.transform.translate_x.update(node.local_time);
                     node.transform.translate_y.update(node.local_time);
 
-                    // Update Path Animation
+                    // Update Path Animation (using cached PathMeasure)
                     if let Some(path_anim) = &mut node.path_animation {
                         path_anim.progress.update(node.local_time);
-                        let mut measure = PathMeasure::new(&path_anim.path, false, None);
-                        let length = measure.length();
+                        let length = path_anim.length();
                         let dist = path_anim.progress.current_value * length;
-                        if let Some((p, _tangent)) = measure.pos_tan(dist) {
+                        if let Some((p, angle)) = path_anim.sample(dist) {
                             node.transform.translate_x.current_value = p.x;
                             node.transform.translate_y.current_value = p.y;
+                            // Apply tangent rotation if enabled
+                            if path_anim.follow_tangent {
+                                node.transform.rotation.current_value = angle.to_degrees();
+                            }
                         }
                     }
 

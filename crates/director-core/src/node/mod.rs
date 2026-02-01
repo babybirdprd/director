@@ -1,5 +1,5 @@
 // TODO: Implement a 3D Node using wgpu for high-performance 3D overlays.
-// TODO: Implement a node for custom SkSL shaders.
+// NOTE: Custom SkSL shaders are already supported via EffectNode with RuntimeShader.
 use crate::animation::EasingType;
 use crate::types::ObjectFit;
 use skia_safe::Rect;

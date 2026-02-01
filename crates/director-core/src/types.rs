@@ -2,10 +2,6 @@
 //!
 //! Shared data types used across the engine.
 //!
-// TODO: Cache PathMeasure and total length in PathAnimationState.
-// TODO: Implement interpolation between two SVG paths (Path-A to Path-B).
-// TODO: Implement OKLab or CIELAB color interpolation to avoid 'gray dead zones'.
-//!
 //! ## Responsibilities
 //! - **Color**: RGBA color representation with Skia conversion.
 //! - **Transform**: Animated 2D transforms (scale, rotation, translation).
@@ -20,7 +16,7 @@ use crate::animation::Animated;
 use keyframe::CanTween;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use skia_safe::{Color4f, Path};
+use skia_safe::{Color4f, Path, PathMeasure};
 
 /// Specifies how the content of a replaceable element (img, video) should
 /// be resized to fit its container.
@@ -54,6 +50,40 @@ pub type NodeId = usize;
 pub struct PathAnimationState {
     pub path: Path,
     pub progress: Animated<f32>,
+    /// Whether the node should rotate to follow the path tangent.
+    pub follow_tangent: bool,
+    /// Cached total length of the path (computed once on creation).
+    cached_length: f32,
+}
+
+impl PathAnimationState {
+    /// Create a new path animation state.
+    pub fn new(path: Path, follow_tangent: bool) -> Self {
+        let mut measure = PathMeasure::new(&path, false, None);
+        let length = measure.length();
+        Self {
+            path,
+            progress: Animated::new(0.0),
+            follow_tangent,
+            cached_length: length,
+        }
+    }
+
+    /// Get the cached path length.
+    pub fn length(&self) -> f32 {
+        self.cached_length
+    }
+
+    /// Sample a position and tangent at a given distance along the path.
+    /// Creates a temporary PathMeasure for sampling.
+    /// Returns (position, tangent_angle_in_radians).
+    pub fn sample(&self, distance: f32) -> Option<(skia_safe::Point, f32)> {
+        let mut measure = PathMeasure::new(&self.path, false, None);
+        measure.pos_tan(distance).map(|(pos, tangent)| {
+            let angle = tangent.y.atan2(tangent.x);
+            (pos, angle)
+        })
+    }
 }
 
 /// Represents the affine transformation state of a node.

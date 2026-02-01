@@ -9,7 +9,6 @@
 //! - **Text Animation**: `add_animator` for per-glyph animations
 //! - **Instant Setters**: `set_blur` for immediate property changes
 
-use crate::animation::Animated;
 use crate::types::PathAnimationState;
 use rhai::Engine;
 use skia_safe::Path;
@@ -360,10 +359,28 @@ pub fn register(engine: &mut Engine) {
                 // Try to parse SVG path
                 if let Some(path) = Path::from_svg(svg) {
                     let ease_fn = parse_easing(ease);
-                    let mut progress = Animated::new(0.0);
-                    progress.add_keyframe(1.0, dur, ease_fn);
+                    let mut state = PathAnimationState::new(path, false);
+                    state.progress.add_keyframe(1.0, dur, ease_fn);
+                    n.path_animation = Some(state);
+                } else {
+                    error!("Failed to parse SVG path: {}", svg);
+                }
+            }
+        },
+    );
 
-                    n.path_animation = Some(PathAnimationState { path, progress });
+    // ========== PATH_ANIMATE_WITH_TANGENT ==========
+    engine.register_fn(
+        "path_animate_with_tangent",
+        |node: &mut NodeHandle, svg: &str, dur: f64, ease: &str| {
+            let mut d = node.director.lock().unwrap();
+            if let Some(n) = d.scene.get_node_mut(node.id) {
+                // Try to parse SVG path
+                if let Some(path) = Path::from_svg(svg) {
+                    let ease_fn = parse_easing(ease);
+                    let mut state = PathAnimationState::new(path, true);
+                    state.progress.add_keyframe(1.0, dur, ease_fn);
+                    n.path_animation = Some(state);
                 } else {
                     error!("Failed to parse SVG path: {}", svg);
                 }

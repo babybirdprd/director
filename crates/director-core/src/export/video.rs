@@ -78,7 +78,8 @@ pub fn render_export(
         }
     }
 
-    let settings = EncoderSettings::preset_h264_yuv420p(width as usize, height as usize, false);
+    let settings = EncoderSettings::preset_h264_yuv420p(width as usize, height as usize, false)
+        .with_encoder_mode(director.encoder_mode);
     let mut encoder = Encoder::new(&out_path, settings)?;
 
     let info = skia_safe::ImageInfo::new(

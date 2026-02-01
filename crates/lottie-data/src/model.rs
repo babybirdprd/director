@@ -1,4 +1,4 @@
-use serde::{de::SeqAccess, de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+use serde::{de::DeserializeOwned, de::SeqAccess, Deserialize, Deserializer, Serialize};
 use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -156,15 +156,15 @@ pub struct LayerStyle {
     #[serde(default)]
     pub c: Property<Vec<f32>>, // Color
     #[serde(default)]
-    pub o: Property<f32>,      // Opacity
+    pub o: Property<f32>, // Opacity
     #[serde(default)]
-    pub a: Property<f32>,      // Angle
+    pub a: Property<f32>, // Angle
     #[serde(default)]
-    pub d: Property<f32>,      // Distance
+    pub d: Property<f32>, // Distance
     #[serde(default)]
-    pub s: Property<f32>,      // Size / Blur
+    pub s: Property<f32>, // Size / Blur
     #[serde(default)]
-    pub ch: Property<f32>,     // Choke / Spread / Range
+    pub ch: Property<f32>, // Choke / Spread / Range
     #[serde(default)]
     pub bm: Option<Property<f32>>, // Blend Mode
 }
@@ -441,19 +441,19 @@ pub struct Transform {
     #[serde(default)]
     pub a: Property<Vec3DefaultZero>, // Anchor: Vec3, default z=0
     #[serde(default)]
-    pub p: PositionProperty,          // Position: Vec3, default z=0
+    pub p: PositionProperty, // Position: Vec3, default z=0
     #[serde(default)]
-    pub s: Property<Vec3Scale>,       // Scale: Vec3, default z=100
+    pub s: Property<Vec3Scale>, // Scale: Vec3, default z=100
     #[serde(default, alias = "r")]
-    pub rz: Property<f32>,            // Rotation Z
+    pub rz: Property<f32>, // Rotation Z
     #[serde(default)]
-    pub rx: Option<Property<f32>>,    // Rotation X
+    pub rx: Option<Property<f32>>, // Rotation X
     #[serde(default)]
-    pub ry: Option<Property<f32>>,    // Rotation Y
+    pub ry: Option<Property<f32>>, // Rotation Y
     #[serde(default)]
     pub or: Option<Property<Vec3DefaultZero>>, // Orientation
     #[serde(default)]
-    pub o: Property<f32>,             // Opacity
+    pub o: Property<f32>, // Opacity
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -548,8 +548,8 @@ pub struct Keyframe<T> {
     pub s: Option<T>,
     #[serde(default, deserialize_with = "deserialize_keyframe_value")]
     pub e: Option<T>,
-    pub i: Option<Vec2>,
-    pub o: Option<Vec2>,
+    pub i: Option<BezierTangent>,
+    pub o: Option<BezierTangent>,
     pub to: Option<Vec<f32>>,
     pub ti: Option<Vec<f32>>,
     pub h: Option<u8>,
@@ -581,6 +581,14 @@ where
 pub type Vec2 = [f32; 2];
 pub type Vec3 = [f32; 3];
 pub type Vec4 = [f32; 4];
+
+/// Bezier tangent control points for keyframe easing
+/// Matches the JSON format: {"x": [0.48], "y": [1]}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BezierTangent {
+    pub x: Vec<f32>,
+    pub y: Vec<f32>,
+}
 
 // Wrapper for Vec3 with Z defaulting to 0.0
 #[derive(Debug, Clone, Serialize)]
@@ -716,7 +724,7 @@ pub struct TextStyleData {
     #[serde(default)]
     pub p: Option<Property<Vec3DefaultZero>>, // Updated to Vec3
     #[serde(default)]
-    pub s: Option<Property<Vec3Scale>>,       // Updated to Vec3Scale
+    pub s: Option<Property<Vec3Scale>>, // Updated to Vec3Scale
     #[serde(default)]
     pub o: Option<Property<f32>>,
     #[serde(default)]

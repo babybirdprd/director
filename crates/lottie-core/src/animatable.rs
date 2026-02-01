@@ -31,10 +31,66 @@ impl Interpolatable for TextDocument {
 
 impl Interpolatable for BezierPath {
     fn lerp(&self, other: &Self, t: f32) -> Self {
-        if t < 1.0 {
-            self.clone()
-        } else {
-            other.clone()
+        // Handle hold keyframes
+        if t <= 0.0 {
+            return self.clone();
+        }
+        if t >= 1.0 {
+            return other.clone();
+        }
+
+        // Match vertex counts by using the minimum
+        // In a full implementation, we'd add vertices to match counts
+        let min_verts = self.v.len().min(other.v.len());
+        if min_verts == 0 {
+            return self.clone();
+        }
+
+        let t_f64 = t as f64;
+        let one_minus_t = 1.0 - t_f64;
+
+        // Interpolate vertices
+        let mut new_v = Vec::with_capacity(min_verts);
+        let mut new_i = Vec::with_capacity(min_verts);
+        let mut new_o = Vec::with_capacity(min_verts);
+
+        for i in 0..min_verts {
+            // Interpolate vertex position
+            let v1 = self.v[i];
+            let v2 = other.v[i];
+            let new_vert = [
+                (v1[0] as f64 * one_minus_t + v2[0] as f64 * t_f64) as f32,
+                (v1[1] as f64 * one_minus_t + v2[1] as f64 * t_f64) as f32,
+            ];
+            new_v.push(new_vert);
+
+            // Interpolate in-tangent (if available)
+            let i1 = self.i.get(i).copied().unwrap_or(v1);
+            let i2 = other.i.get(i).copied().unwrap_or(v2);
+            let new_in = [
+                (i1[0] as f64 * one_minus_t + i2[0] as f64 * t_f64) as f32,
+                (i1[1] as f64 * one_minus_t + i2[1] as f64 * t_f64) as f32,
+            ];
+            new_i.push(new_in);
+
+            // Interpolate out-tangent (if available)
+            let o1 = self.o.get(i).copied().unwrap_or(v1);
+            let o2 = other.o.get(i).copied().unwrap_or(v2);
+            let new_out = [
+                (o1[0] as f64 * one_minus_t + o2[0] as f64 * t_f64) as f32,
+                (o1[1] as f64 * one_minus_t + o2[1] as f64 * t_f64) as f32,
+            ];
+            new_o.push(new_out);
+        }
+
+        // Use closed flag from self (could also interpolate if they differ)
+        let closed = self.c;
+
+        BezierPath {
+            c: closed,
+            v: new_v,
+            i: new_i,
+            o: new_o,
         }
     }
 }
@@ -483,14 +539,18 @@ impl Animator {
 
                 let mut local_t = (frame - kf_start.t) / duration;
 
-                // Easing
-                let p1 = if let Some(o) = kf_start.o {
-                    Vec2::new(o[0], o[1])
+                // Easing - extract from BezierTangent structure
+                let p1 = if let Some(o) = &kf_start.o {
+                    let x = o.x.first().copied().unwrap_or(0.0);
+                    let y = o.y.first().copied().unwrap_or(0.0);
+                    Vec2::new(x, y)
                 } else {
                     Vec2::new(0.0, 0.0)
                 };
-                let p2 = if let Some(i) = kf_end.i {
-                    Vec2::new(i[0], i[1])
+                let p2 = if let Some(i) = &kf_end.i {
+                    let x = i.x.first().copied().unwrap_or(1.0);
+                    let y = i.y.first().copied().unwrap_or(1.0);
+                    Vec2::new(x, y)
                 } else {
                     Vec2::new(1.0, 1.0)
                 };

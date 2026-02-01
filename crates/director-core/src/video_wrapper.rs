@@ -59,12 +59,29 @@ pub enum HardwareAccel {
     Software,
 }
 
+/// Encoder mode for video encoding with hardware acceleration support.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum EncoderMode {
+    /// Automatically select best available encoder (NVENC → QSV → AMF → libx264).
+    #[default]
+    Auto,
+    /// Force software encoding (libx264).
+    Software,
+    /// Force NVIDIA NVENC hardware encoding.
+    Nvenc,
+    /// Force Intel QSV hardware encoding.
+    Qsv,
+    /// Force AMD AMF hardware encoding.
+    Amf,
+}
+
 pub struct EncoderSettings {
     pub width: usize,
     pub height: usize,
     pub sample_rate: i32,
     pub hardware_accel: HardwareAccel,
     pub fps: u32,
+    pub encoder_mode: EncoderMode,
 }
 
 impl EncoderSettings {
@@ -75,7 +92,230 @@ impl EncoderSettings {
             sample_rate: 48000,
             hardware_accel: HardwareAccel::Auto,
             fps: 30,
+            encoder_mode: EncoderMode::Auto,
         }
+    }
+
+    pub fn with_encoder_mode(mut self, mode: EncoderMode) -> Self {
+        self.encoder_mode = mode;
+        self
+    }
+}
+
+/// Information about the current encoder configuration.
+#[derive(Debug, Clone)]
+pub struct EncoderInfo {
+    pub codec: String,
+    pub is_hardware: bool,
+    pub encoder_name: String,
+    pub available_encoders: Vec<String>,
+    /// Warnings about encoders that are available but not working.
+    pub warnings: Vec<String>,
+}
+
+/// Detect available hardware encoders by testing FFmpeg.
+/// Only returns encoders that actually work (driver compatibility verified).
+pub fn detect_available_encoders() -> Vec<&'static str> {
+    let mut available = vec![];
+
+    // Test NVENC (NVIDIA) - verify it actually works
+    if test_encoder_available("h264_nvenc") && test_encoder_works("h264_nvenc") {
+        available.push("nvenc");
+    }
+
+    // Test Intel QSV - verify it actually works
+    if test_encoder_available("h264_qsv") && test_encoder_works("h264_qsv") {
+        available.push("qsv");
+    }
+
+    // Test AMD AMF - verify it actually works
+    if test_encoder_available("h264_amf") && test_encoder_works("h264_amf") {
+        available.push("amf");
+    }
+
+    // Software encoder is always available
+    available.push("software");
+
+    available
+}
+
+/// Test if a specific encoder is available in FFmpeg.
+fn test_encoder_available(encoder: &str) -> bool {
+    let output = Command::new(FFmpegDriver::binary())
+        .arg("-encoders")
+        .output();
+
+    match output {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            stdout.contains(encoder)
+        }
+        _ => false,
+    }
+}
+
+/// Test if encoder actually works by running a test encode.
+fn test_encoder_works(encoder: &str) -> bool {
+    // Try to run ffmpeg with the encoder to verify it actually works
+    let output = Command::new(FFmpegDriver::binary())
+        .arg("-f")
+        .arg("lavfi")
+        .arg("-i")
+        .arg("testsrc=duration=1:size=32x32:rate=1")
+        .arg("-c:v")
+        .arg(encoder)
+        .arg("-frames:v")
+        .arg("1")
+        .arg("-f")
+        .arg("null")
+        .arg("-")
+        .output();
+
+    match output {
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            // Check for common failure patterns
+            let driver_errors = [
+                "Driver does not support",
+                "The minimum required Nvidia driver",
+                "DLL amfrt64.dll failed to open",
+                "Error while opening encoder",
+            ];
+
+            for error in &driver_errors {
+                if stderr.contains(error) {
+                    return false;
+                }
+            }
+            output.status.success()
+        }
+        Err(_) => false,
+    }
+}
+
+/// Select the best available encoder based on priority and actual testing.
+fn select_best_encoder() -> &'static str {
+    // Priority: NVENC → QSV → AMF → libx264
+    // Test each encoder to ensure it actually works (driver compatibility)
+
+    if test_encoder_available("h264_nvenc") && test_encoder_works("h264_nvenc") {
+        return "h264_nvenc";
+    }
+
+    if test_encoder_available("h264_qsv") && test_encoder_works("h264_qsv") {
+        return "h264_qsv";
+    }
+
+    if test_encoder_available("h264_amf") && test_encoder_works("h264_amf") {
+        return "h264_amf";
+    }
+
+    "libx264"
+}
+
+/// Detect why an encoder failed and return a helpful message.
+pub fn detect_encoder_failure_reason(encoder: &str) -> Option<String> {
+    let output = Command::new(FFmpegDriver::binary())
+        .arg("-f")
+        .arg("lavfi")
+        .arg("-i")
+        .arg("testsrc=duration=1:size=32x32:rate=1")
+        .arg("-c:v")
+        .arg(encoder)
+        .arg("-frames:v")
+        .arg("1")
+        .arg("-f")
+        .arg("null")
+        .arg("-")
+        .output();
+
+    match output {
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+
+            if stderr.contains("Driver does not support the required nvenc API version") {
+                return Some(format!(
+                    "NVIDIA driver outdated. {} Please update from nvidia.com/drivers",
+                    stderr
+                        .lines()
+                        .find(|l| l.contains("Required:"))
+                        .unwrap_or("")
+                ));
+            }
+
+            if stderr.contains("DLL amfrt64.dll failed to open") {
+                return Some("AMD GPU drivers not installed or runtime missing".to_string());
+            }
+
+            if stderr.contains("Error while opening encoder") {
+                return Some(format!(
+                    "{} encoder initialization failed (driver/hardware issue)",
+                    encoder
+                ));
+            }
+
+            None
+        }
+        Err(e) => Some(format!("Failed to test encoder: {}", e)),
+    }
+}
+
+/// Get encoder codec string based on mode.
+pub fn get_encoder_codec(mode: EncoderMode) -> &'static str {
+    match mode {
+        EncoderMode::Auto => select_best_encoder(),
+        EncoderMode::Software => "libx264",
+        EncoderMode::Nvenc => "h264_nvenc",
+        EncoderMode::Qsv => "h264_qsv",
+        EncoderMode::Amf => "h264_amf",
+    }
+}
+
+/// Get human-readable encoder name.
+pub fn get_encoder_name(codec: &str) -> &'static str {
+    match codec {
+        "h264_nvenc" => "NVIDIA NVENC",
+        "h264_qsv" => "Intel Quick Sync",
+        "h264_amf" => "AMD AMF",
+        _ => "Software (libx264)",
+    }
+}
+
+/// Get encoder info for diagnostics.
+pub fn get_encoder_info(mode: EncoderMode) -> EncoderInfo {
+    let available = detect_available_encoders();
+    let codec = get_encoder_codec(mode);
+    let is_hardware = codec != "libx264";
+    let name = get_encoder_name(codec);
+
+    // Collect warnings for encoders that are available but not working
+    let mut warnings = vec![];
+
+    // Check each potential hardware encoder
+    if test_encoder_available("h264_nvenc") && !test_encoder_works("h264_nvenc") {
+        if let Some(reason) = detect_encoder_failure_reason("h264_nvenc") {
+            warnings.push(format!("NVENC unavailable: {}", reason));
+        }
+    }
+
+    if test_encoder_available("h264_qsv") && !test_encoder_works("h264_qsv") {
+        if let Some(reason) = detect_encoder_failure_reason("h264_qsv") {
+            warnings.push(format!("QSV unavailable: {}", reason));
+        }
+    }
+
+    if test_encoder_available("h264_amf") && !test_encoder_works("h264_amf") {
+        if let Some(reason) = detect_encoder_failure_reason("h264_amf") {
+            warnings.push(format!("AMF unavailable: {}", reason));
+        }
+    }
+
+    EncoderInfo {
+        codec: codec.to_string(),
+        is_hardware,
+        encoder_name: name.to_string(),
+        available_encoders: available.iter().map(|s| s.to_string()).collect(),
+        warnings,
     }
 }
 
@@ -102,11 +342,21 @@ impl Encoder {
         let video_temp_path = temp_dir.join(format!("director_vid_{}.mp4", uuid));
         let audio_path = temp_dir.join(format!("director_aud_{}.raw", uuid));
 
-        // Spawn Video Encoder (Silent audio)
+        // Select encoder based on settings
+        let codec = get_encoder_codec(settings.encoder_mode);
+        let is_hardware = codec != "libx264";
+
+        tracing::info!(
+            "Initializing video encoder: {} ({})",
+            codec,
+            if is_hardware { "Hardware" } else { "Software" }
+        );
+
+        // Spawn Video Encoder with quality-preserving settings
         // ffmpeg -y -f rawvideo -pixel_format rgba -video_size WxH -framerate FPS -i pipe:0
-        //        -c:v libx264 -pix_fmt yuv420p video_temp.mp4
-        let video_process = Command::new(FFmpegDriver::binary())
-            .arg("-y")
+        //        -c:v [codec] -pix_fmt yuv420p [quality_flags] video_temp.mp4
+        let mut cmd = Command::new(FFmpegDriver::binary());
+        cmd.arg("-y")
             .arg("-f")
             .arg("rawvideo")
             .arg("-pixel_format")
@@ -118,10 +368,54 @@ impl Encoder {
             .arg("-i")
             .arg("pipe:0")
             .arg("-c:v")
-            .arg("libx264")
+            .arg(codec)
             .arg("-pix_fmt")
-            .arg("yuv420p")
-            // Optional: Add hardware flags here based on settings.hardware_accel
+            .arg("yuv420p");
+
+        // Add quality-preserving settings based on encoder
+        if is_hardware {
+            // Hardware encoder settings (NVENC, QSV, AMF)
+            match codec {
+                "h264_nvenc" => {
+                    // NVENC quality settings - preserve visual quality
+                    cmd.arg("-preset")
+                        .arg("slow")
+                        .arg("-rc")
+                        .arg("constqp")
+                        .arg("-qp")
+                        .arg("23")
+                        .arg("-bf")
+                        .arg("2");
+                }
+                "h264_qsv" => {
+                    // Intel QSV quality settings
+                    cmd.arg("-preset")
+                        .arg("veryslow")
+                        .arg("-global_quality")
+                        .arg("23");
+                }
+                "h264_amf" => {
+                    // AMD AMF quality settings
+                    cmd.arg("-rc")
+                        .arg("cqp")
+                        .arg("-qp_i")
+                        .arg("23")
+                        .arg("-qp_p")
+                        .arg("23");
+                }
+                _ => {}
+            }
+        } else {
+            // Software encoder (libx264) - highest quality
+            cmd.arg("-preset")
+                .arg("slow")
+                .arg("-crf")
+                .arg("23")
+                .arg("-tune")
+                .arg("film");
+        }
+
+        let video_process = cmd
             .arg(&video_temp_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::inherit())

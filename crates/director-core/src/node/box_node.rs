@@ -1,8 +1,8 @@
-// TODO: Implement a node for custom SkSL shaders.
+// NOTE: Custom SkSL shaders are supported via EffectNode with RuntimeShader.
 use crate::animation::Animated;
 use crate::element::Element;
 use crate::errors::RenderError;
-use crate::node::{parse_easing, EffectType, build_effect_filter};
+use crate::node::{build_effect_filter, parse_easing, EffectType};
 use crate::types::Color;
 use skia_safe::{Canvas, ClipOp, Paint, PaintStyle, RRect, Rect};
 use std::any::Any;

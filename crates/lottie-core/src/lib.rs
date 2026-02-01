@@ -452,7 +452,7 @@ impl<'a> SceneGraphBuilder<'a> {
 
         let content = if let Some(shapes) = &layer.shapes {
             let shape_nodes =
-                self.process_shapes(shapes, self.frame - layer.st, evaluator.as_deref_mut());
+                self.process_shapes(shapes, self.frame, evaluator.as_deref_mut(), None);
             NodeContent::Group(shape_nodes)
         } else if let Some(text_data) = &layer.t {
             // Text Layer
@@ -1853,11 +1853,12 @@ impl<'a> SceneGraphBuilder<'a> {
         frame: f32,
         #[cfg(feature = "expressions")] mut evaluator: Option<&mut ExpressionEvaluator>,
         #[cfg(not(feature = "expressions"))] mut evaluator: Option<&mut ()>,
+        inherited_trim: Option<Trim>,
     ) -> Vec<RenderNode> {
         let mut processed_nodes = Vec::new();
         let mut active_geometries: Vec<PendingGeometry> = Vec::new();
 
-        let mut trim: Option<Trim> = None;
+        let mut trim: Option<Trim> = inherited_trim;
         for item in shapes {
             if let data::Shape::Trim(t) = item {
                 let s = Animator::resolve(
@@ -2594,7 +2595,7 @@ impl<'a> SceneGraphBuilder<'a> {
                     }
                 }
                 data::Shape::Group(g) => {
-                    let group_nodes = self.process_shapes(&g.it, frame, evaluator.as_deref_mut());
+                    let group_nodes = self.process_shapes(&g.it, frame, evaluator.as_deref_mut(), trim.clone());
                     processed_nodes.push(RenderNode {
                         transform: Mat4::IDENTITY,
                         alpha: 1.0,

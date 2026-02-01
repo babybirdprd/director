@@ -112,3 +112,70 @@ movie
         );
     }
 }
+
+/// Test new advanced transition types with parameters.
+#[test]
+fn advanced_transition_types() {
+    let mut engine = Engine::new();
+    register_rhai_api(&mut engine, Arc::new(DefaultAssetLoader));
+
+    // Test wave transition
+    let script = r#"
+        let movie = new_director(100, 100, 30);
+        let s1 = movie.add_scene(2.0);
+        let s2 = movie.add_scene(2.0);
+        movie.add_wave_transition(s1, s2, 0.5, "linear", 10.0, 0.5);
+        movie
+    "#;
+    let result = engine.eval::<MovieHandle>(script);
+    assert!(
+        result.is_ok(),
+        "Wave transition should work: {:?}",
+        result.err()
+    );
+
+    // Test glitch transition
+    let script = r#"
+        let movie = new_director(100, 100, 30);
+        let s1 = movie.add_scene(2.0);
+        let s2 = movie.add_scene(2.0);
+        movie.add_glitch_transition(s1, s2, 0.5, "linear", 5.0);
+        movie
+    "#;
+    let result = engine.eval::<MovieHandle>(script);
+    assert!(
+        result.is_ok(),
+        "Glitch transition should work: {:?}",
+        result.err()
+    );
+
+    // Test iris transition
+    let script = r#"
+        let movie = new_director(100, 100, 30);
+        let s1 = movie.add_scene(2.0);
+        let s2 = movie.add_scene(2.0);
+        movie.add_iris_transition(s1, s2, 0.5, "linear", 0.0, 100.0);
+        movie
+    "#;
+    let result = engine.eval::<MovieHandle>(script);
+    assert!(
+        result.is_ok(),
+        "Iris transition should work: {:?}",
+        result.err()
+    );
+
+    // Test spiral transition
+    let script = r#"
+        let movie = new_director(100, 100, 30);
+        let s1 = movie.add_scene(2.0);
+        let s2 = movie.add_scene(2.0);
+        movie.add_spiral_transition(s1, s2, 0.5, "linear", 3.0);
+        movie
+    "#;
+    let result = engine.eval::<MovieHandle>(script);
+    assert!(
+        result.is_ok(),
+        "Spiral transition should work: {:?}",
+        result.err()
+    );
+}
