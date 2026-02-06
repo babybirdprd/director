@@ -85,7 +85,7 @@
             const path = document.getElementById('scriptPath').value;
             statusLabel.innerText = "Initializing Script (Wait for proxies)...";
             try {
-                const res = await fetch(`http://localhost:3000/init?script_path=${encodeURIComponent(path)}`);
+                const res = await fetch(`http://localhost:3000/api/init?script_path=${encodeURIComponent(path)}`);
                 const text = await res.text();
                 try {
                     const data = JSON.parse(text);
@@ -123,7 +123,7 @@
             pendingFrame = null;
 
             try {
-                const res = await fetch(`http://localhost:3000/render?time=${t}`);
+                const res = await fetch(`http://localhost:3000/api/render?time=${t}`);
                 if (res.ok) {
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);

@@ -147,6 +147,7 @@ pub fn register(engine: &mut Engine, loader: Arc<dyn AssetLoader>) {
 
         let item = TimelineItem {
             scene_root: id,
+            name: None,
             start_time,
             duration,
             z_index: 0,

@@ -53,6 +53,7 @@ fn video_export_mode_blocks() {
 
     director.timeline.push(TimelineItem {
         scene_root: node_id,
+        name: None,
         start_time: 0.0,
         duration: 10.0,
         z_index: 0,
@@ -84,6 +85,7 @@ fn video_bytes_source() {
 
     director.timeline.push(TimelineItem {
         scene_root: node_id,
+        name: None,
         start_time: 0.0,
         duration: 1.0,
         z_index: 0,

@@ -42,6 +42,7 @@ fn text_fit_shrink() {
         .timeline
         .push(director_core::director::TimelineItem {
             scene_root: id,
+            name: None,
             start_time: 0.0,
             duration: 1.0,
             z_index: 0,
@@ -97,6 +98,7 @@ fn text_span_rich_styling() {
         .timeline
         .push(director_core::director::TimelineItem {
             scene_root: id,
+            name: None,
             start_time: 0.0,
             duration: 1.0,
             z_index: 0,
@@ -138,6 +140,7 @@ fn text_shadow() {
         .timeline
         .push(director_core::director::TimelineItem {
             scene_root: id,
+            name: None,
             start_time: 0.0,
             duration: 1.0,
             z_index: 0,

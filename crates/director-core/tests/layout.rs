@@ -77,6 +77,7 @@ fn layout_structure_snapshot() {
 
         d.timeline.push(TimelineItem {
             scene_root: root_id,
+            name: None,
             start_time: 0.0,
             duration: 10.0,
             z_index: 0,
@@ -200,6 +201,7 @@ fn grid_layout_basic() {
 
     d.timeline.push(TimelineItem {
         scene_root: grid_id,
+        name: None,
         start_time: 0.0,
         duration: 10.0,
         z_index: 0,

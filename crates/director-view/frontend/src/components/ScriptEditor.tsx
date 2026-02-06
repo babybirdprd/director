@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import { useProjectStore } from '@/stores/project';
-import { Play, FolderOpen, AlertCircle } from 'lucide-react';
+import { Play, FolderOpen, AlertCircle, Save } from 'lucide-react';
 
 // Rhai language configuration for Monaco
 const RHAI_LANGUAGE_CONFIG = {
@@ -105,6 +105,7 @@ export function ScriptEditor() {
         isLoading,
         setScript,
         runScript,
+        saveScript,
         loadScriptFromPath,
     } = useProjectStore();
 
@@ -123,10 +124,9 @@ export function ScriptEditor() {
             runScript();
         });
 
-        // Add keyboard shortcut for save (placeholder)
+        // Add keyboard shortcut for save
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-            // TODO: Implement save to file
-            console.log('Save requested');
+            saveScript();
         });
     };
 
@@ -153,9 +153,7 @@ export function ScriptEditor() {
                             {scriptPath.split(/[/\\]/).pop()}
                         </span>
                     )}
-                    {isScriptDirty && (
-                        <span className="text-xs text-director-accent">•</span>
-                    )}
+                    {isScriptDirty && <span className="text-xs text-director-accent">*</span>}
                 </div>
                 <div className="flex items-center gap-1">
                     <button
@@ -164,6 +162,14 @@ export function ScriptEditor() {
                         title="Open file"
                     >
                         <FolderOpen size={16} />
+                    </button>
+                    <button
+                        onClick={() => saveScript()}
+                        disabled={isLoading || !scriptPath || !isScriptDirty}
+                        className="btn-icon"
+                        title="Save file (Ctrl+S)"
+                    >
+                        <Save size={16} />
                     </button>
                     <button
                         onClick={() => runScript()}
@@ -215,7 +221,7 @@ export function ScriptEditor() {
             {/* Status bar */}
             <div className="flex items-center justify-between px-3 py-1 border-t border-director-border bg-director-surface/50 text-xs text-director-text-muted">
                 <span>Rhai Script</span>
-                <span>Ctrl+Enter to run</span>
+                <span>Ctrl+Enter run, Ctrl+S save</span>
             </div>
         </div>
     );

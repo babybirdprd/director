@@ -26,6 +26,7 @@ export function Controls() {
         togglePlayback,
         seek,
         setFps,
+        exportVideo,
     } = useProjectStore();
 
     const lastTimeRef = useRef<number>(0);
@@ -118,8 +119,7 @@ export function Controls() {
     const handleExport = async () => {
         const outputPath = window.prompt('Enter output path:', 'output.mp4');
         if (outputPath) {
-            // TODO: Implement export via API
-            console.log('Export to:', outputPath);
+            await exportVideo(outputPath);
         }
     };
 

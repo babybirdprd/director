@@ -800,7 +800,13 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "director-core",
+ "image",
+ "lottie-core",
+ "lottie-data",
+ "lottie-skia",
  "rhai",
+ "serde_json",
+ "skia-safe",
  "tracing",
  "tracing-subscriber",
 ]
@@ -889,6 +895,7 @@ dependencies = [
  "serde",
  "serde_json",
  "skia-safe",
+ "tempfile",
  "tokio",
  "tower-http",
  "tracing",

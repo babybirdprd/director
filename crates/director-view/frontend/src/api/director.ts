@@ -28,23 +28,49 @@ export interface ExportProgress {
     percent: number;
 }
 
+export interface ApiErrorPayload {
+    error: string;
+    line?: number;
+    column?: number;
+    snippet?: string;
+}
+
+export interface ExportResponse {
+    status: string;
+    output: string;
+}
+
+async function parseErrorResponse(res: Response): Promise<Error> {
+    const text = await res.text();
+    try {
+        const payload = JSON.parse(text) as ApiErrorPayload;
+        if (payload.error) {
+            const location = payload.line
+                ? ` (line ${payload.line}${payload.column ? `, col ${payload.column}` : ''})`
+                : '';
+            const snippet = payload.snippet ? `\n> ${payload.snippet}` : '';
+            return new Error(`${payload.error}${location}${snippet}`);
+        }
+    } catch {
+        // Fall through to plain-text error.
+    }
+    return new Error(text || `HTTP ${res.status}`);
+}
+
 class DirectorApi {
     /**
      * Initialize a script from a file path
      */
     async initFromPath(scriptPath: string): Promise<InitResponse> {
         const res = await fetch(`${API_BASE}/init?script_path=${encodeURIComponent(scriptPath)}`);
-        const text = await res.text();
-
-        try {
-            return JSON.parse(text);
-        } catch {
-            throw new Error(text);
+        if (!res.ok) {
+            throw await parseErrorResponse(res);
         }
+        return res.json();
     }
 
     /**
-     * Initialize a script from content (requires backend update)
+     * Initialize a script from inline content
      */
     async initFromContent(scriptContent: string): Promise<InitResponse> {
         const res = await fetch(`${API_BASE}/init`, {
@@ -54,8 +80,7 @@ class DirectorApi {
         });
 
         if (!res.ok) {
-            const error = await res.text();
-            throw new Error(error);
+            throw await parseErrorResponse(res);
         }
 
         return res.json();
@@ -69,8 +94,7 @@ class DirectorApi {
         const res = await fetch(`${API_BASE}/render?time=${time}`, { signal });
 
         if (!res.ok) {
-            const error = await res.text();
-            throw new Error(error);
+            throw await parseErrorResponse(res);
         }
 
         const blob = await res.blob();
@@ -84,10 +108,25 @@ class DirectorApi {
         const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`);
 
         if (!res.ok) {
-            throw new Error(`Failed to read file: ${path}`);
+            throw await parseErrorResponse(res);
         }
 
         return res.text();
+    }
+
+    /**
+     * Save script content to a file path
+     */
+    async saveFile(path: string, content: string): Promise<void> {
+        const res = await fetch(`${API_BASE}/file`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path, content }),
+        });
+
+        if (!res.ok) {
+            throw await parseErrorResponse(res);
+        }
     }
 
     /**
@@ -106,7 +145,7 @@ class DirectorApi {
     /**
      * Trigger video export
      */
-    async exportVideo(outputPath: string): Promise<void> {
+    async exportVideo(outputPath: string): Promise<ExportResponse> {
         const res = await fetch(`${API_BASE}/export`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -114,9 +153,10 @@ class DirectorApi {
         });
 
         if (!res.ok) {
-            const error = await res.text();
-            throw new Error(error);
+            throw await parseErrorResponse(res);
         }
+
+        return res.json();
     }
 
     /**

@@ -27,6 +27,8 @@ export interface ProjectState {
     setScriptPath: (path: string | null) => void;
     loadScriptFromPath: (path: string) => Promise<void>;
     runScript: () => Promise<void>;
+    saveScript: () => Promise<void>;
+    exportVideo: (outputPath: string) => Promise<void>;
     seek: (time: number) => void;
     play: () => void;
     pause: () => void;
@@ -131,6 +133,38 @@ export const useProjectStore = create<ProjectState>()(
                 } catch (e) {
                     set({
                         scriptError: e instanceof Error ? e.message : 'Script execution failed',
+                        isLoading: false,
+                    });
+                }
+            },
+
+            saveScript: async () => {
+                const { scriptPath, scriptContent } = get();
+                if (!scriptPath) {
+                    set({ scriptError: 'No script path set. Open a file first.' });
+                    return;
+                }
+
+                set({ isLoading: true, scriptError: null });
+                try {
+                    await api.saveFile(scriptPath, scriptContent);
+                    set({ isScriptDirty: false, isLoading: false });
+                } catch (e) {
+                    set({
+                        scriptError: e instanceof Error ? e.message : 'Failed to save file',
+                        isLoading: false,
+                    });
+                }
+            },
+
+            exportVideo: async (outputPath: string) => {
+                set({ isLoading: true, scriptError: null });
+                try {
+                    await api.exportVideo(outputPath);
+                    set({ isLoading: false });
+                } catch (e) {
+                    set({
+                        scriptError: e instanceof Error ? e.message : 'Export failed',
                         isLoading: false,
                     });
                 }

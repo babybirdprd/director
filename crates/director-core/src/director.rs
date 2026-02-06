@@ -11,7 +11,7 @@
 //!
 //! ## Key Types
 //! - `Director`: The god object that owns timeline, assets, and context.
-//! - `TimelineItem`: A scene with start time, duration, and transitions.
+//! - `TimelineItem`: A scene with start time, duration, optional name, and transitions.
 //! - `DirectorContext`: Shared state for nested compositions.
 
 // use rayon::prelude::*; // Rayon disabled due to Taffy !Send
@@ -39,6 +39,8 @@ pub struct DirectorContext {
 pub struct TimelineItem {
     /// The root node of this scene.
     pub scene_root: NodeId,
+    /// Optional scene label (used by UIs and diagnostics).
+    pub name: Option<String>,
     /// The global start time in seconds.
     pub start_time: f64,
     /// The duration of the scene in seconds.

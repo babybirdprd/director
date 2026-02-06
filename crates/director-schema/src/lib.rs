@@ -1,7 +1,3 @@
-// TODO: Connect director-schema audio_bindings to the core engine's FFT analyzer in director-pipeline.
-// TODO: Add support for 'default_font' and 'asset_search_paths' in MovieRequest.
-// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
-// TODO: Add spring physics animation support. SpringConfig struct with stiffness, damping, mass, velocity.
 use director_core::animation::{EasingType, SpringConfig};
 use director_core::types::{Color, GradientConfig};
 use schemars::JsonSchema;
@@ -12,6 +8,12 @@ pub struct MovieRequest {
     pub width: u32,
     pub height: u32,
     pub fps: u32,
+    /// Optional default fallback font path used during text shaping.
+    #[serde(default)]
+    pub default_font: Option<String>,
+    /// Ordered search paths used for resolving relative asset references.
+    #[serde(default)]
+    pub asset_search_paths: Vec<String>,
     pub scenes: Vec<Scene>,
     /// Global audio tracks for the movie
     #[serde(default)]
@@ -51,7 +53,13 @@ fn default_easing() -> EasingType {
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 pub struct Scene {
     pub id: String,
+    /// Optional scene name used by tooling/preview timeline UIs.
+    #[serde(default)]
+    pub name: Option<String>,
     pub duration_secs: f64,
+    /// Timeline render order for overlapping scenes.
+    #[serde(default)]
+    pub z_index: i32,
     pub background: Option<Color>,
     pub root: Node,
     /// Transition to the next scene (optional)
@@ -284,6 +292,8 @@ pub struct StyleMap {
     /// Linear gradient background (overrides bg_color if present)
     pub bg_gradient: Option<GradientConfig>,
     pub opacity: Option<f32>,
+    /// Node render order relative to siblings; larger values render on top.
+    pub z_index: Option<i32>,
 
     // Border
     pub border_width: Option<f32>,
@@ -406,6 +416,52 @@ fn default_volume() -> f32 {
     1.0
 }
 
+/// Frequency-band selector for audio-reactive bindings.
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AudioBand {
+    Bass,
+    Mids,
+    Highs,
+}
+
+impl AudioBand {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Bass => "bass",
+            Self::Mids => "mids",
+            Self::Highs => "highs",
+        }
+    }
+}
+
+/// Node property selector for audio-reactive bindings.
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AudioReactiveProperty {
+    Scale,
+    ScaleX,
+    ScaleY,
+    X,
+    Y,
+    Rotation,
+    Opacity,
+}
+
+impl AudioReactiveProperty {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Scale => "scale",
+            Self::ScaleX => "scale_x",
+            Self::ScaleY => "scale_y",
+            Self::X => "x",
+            Self::Y => "y",
+            Self::Rotation => "rotation",
+            Self::Opacity => "opacity",
+        }
+    }
+}
+
 /// Binds a node property to an audio analysis value.
 ///
 /// Enables beat-reactive visuals by mapping frequency band energy to node properties.
@@ -413,10 +469,10 @@ fn default_volume() -> f32 {
 pub struct AudioReactiveBinding {
     /// ID of the audio track to analyze
     pub audio_id: String,
-    /// Frequency band: "bass", "mids", "highs"
-    pub band: String,
-    /// Property to bind: "scale", "opacity", "y", "x", "rotation"
-    pub property: String,
+    /// Frequency band.
+    pub band: AudioBand,
+    /// Property to bind.
+    pub property: AudioReactiveProperty,
     /// Minimum output value (when energy is 0)
     pub min_value: f32,
     /// Maximum output value (when energy is 1)
@@ -437,9 +493,13 @@ mod tests {
             width: 1920,
             height: 1080,
             fps: 30,
+            default_font: None,
+            asset_search_paths: vec![],
             scenes: vec![Scene {
                 id: "scene_1".to_string(),
+                name: Some("Scene 1".to_string()),
                 duration_secs: 5.0,
+                z_index: 0,
                 background: Some(Color::BLACK),
                 root: Node {
                     id: "root".to_string(),
@@ -573,7 +633,9 @@ mod tests {
                 fps: 30,
                 scenes: vec![Scene {
                     id: "inner_scene".to_string(),
+                    name: Some("Inner Scene".to_string()),
                     duration_secs: 2.0,
+                    z_index: 0,
                     background: Some(Color::BLACK),
                     root: Node {
                         id: "inner_root".to_string(),

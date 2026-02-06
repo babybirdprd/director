@@ -2,7 +2,6 @@
 //!
 //! Arena-based storage for the node hierarchy.
 //!
-// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
 // TODO: Cache PathMeasure and total length in PathAnimationState.
 //!
 //! ## Responsibilities

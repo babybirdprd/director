@@ -2,8 +2,8 @@ use director_core::animation::SpringConfig;
 use director_core::AssetLoader;
 use director_pipeline::load_movie;
 use director_schema::{
-    AudioReactiveBinding, AudioTrack, MovieRequest, Node, NodeKind, SpringAnimation, StyleMap,
-    TransformMap,
+    AudioBand, AudioReactiveBinding, AudioReactiveProperty, AudioTrack, MovieRequest, Node,
+    NodeKind, SpringAnimation, StyleMap, TransformMap,
 };
 use std::sync::Arc;
 
@@ -36,14 +36,21 @@ fn test_pipeline_parity() {
         width: 1920,
         height: 1080,
         fps: 30,
+        default_font: None,
+        asset_search_paths: vec![],
         scenes: vec![director_schema::Scene {
             id: "scene1".to_string(),
+            name: Some("Scene 1".to_string()),
             duration_secs: 5.0,
+            z_index: 7,
             background: None,
             root: Node {
                 id: "root".to_string(),
                 kind: NodeKind::Box { border_radius: 0.0 },
-                style: StyleMap::default(),
+                style: StyleMap {
+                    z_index: Some(11),
+                    ..StyleMap::default()
+                },
                 transform: TransformMap::default(),
                 animations: vec![],
                 spring_animations: vec![SpringAnimation {
@@ -58,8 +65,8 @@ fn test_pipeline_parity() {
                 }],
                 audio_bindings: vec![AudioReactiveBinding {
                     audio_id: "track1".to_string(),
-                    band: "bass".to_string(),
-                    property: "scale_y".to_string(),
+                    band: AudioBand::Bass,
+                    property: AudioReactiveProperty::ScaleY,
                     min_value: 1.0,
                     max_value: 2.0,
                     smoothing: 0.5,
@@ -97,10 +104,13 @@ fn test_pipeline_parity() {
     // Get root node from scene 0
     // Director.timeline[0].scene_root is the ID
     let root_id = director.timeline[0].scene_root;
+    assert_eq!(director.timeline[0].name.as_deref(), Some("Scene 1"));
+    assert_eq!(director.timeline[0].z_index, 7);
     let root_node = director
         .scene
         .get_node(root_id)
         .expect("Root node should exist");
+    assert_eq!(root_node.z_index, 11);
 
     assert_eq!(
         root_node.audio_bindings.len(),

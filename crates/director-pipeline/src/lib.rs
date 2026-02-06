@@ -1,6 +1,3 @@
-// TODO: Connect director-schema audio_bindings to the core engine's FFT analyzer in director-pipeline.
-// TODO: Add support for 'default_font' and 'asset_search_paths' in MovieRequest.
-// TODO: Update the JSON schema for Scenes and Nodes to include z_index.
 use anyhow::{Context, Result};
 use director_core::animation::{Animated, EasingType, SpringConfig as CoreSpringConfig};
 use director_core::audio::load_audio_bytes;
@@ -19,6 +16,7 @@ use director_schema::{
     Animation, EffectConfig, MovieRequest, Node, NodeKind, StyleMap, TransformMap, TransitionType,
 };
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 use taffy::geometry::{Line, Rect, Size};
 use taffy::prelude::*;
@@ -29,11 +27,17 @@ use taffy::style::{
 
 /// Converts a Schema Request into a runnable Director instance.
 pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Result<Director> {
+    let wrapped_loader: Arc<dyn AssetLoader> = Arc::new(PipelineAssetLoader {
+        inner: loader,
+        search_roots: request.asset_search_paths.clone(),
+        default_font: request.default_font.clone(),
+    });
+
     let mut director = Director::new(
         request.width as i32,
         request.height as i32,
         request.fps,
-        loader,
+        wrapped_loader,
         RenderMode::Export,
         None,
     );
@@ -84,9 +88,10 @@ pub fn load_movie(request: MovieRequest, loader: Arc<dyn AssetLoader>) -> Result
             .timeline
             .push(director_core::director::TimelineItem {
                 scene_root: root_id,
+                name: scene_data.name.clone(),
                 start_time,
                 duration: scene_data.duration_secs,
-                z_index: 0,
+                z_index: scene_data.z_index,
                 audio_tracks: vec![],
             });
     }
@@ -302,9 +307,10 @@ fn build_node_recursive(
                     .timeline
                     .push(director_core::director::TimelineItem {
                         scene_root: root_id,
+                        name: scene_data.name.clone(),
                         start_time: cumulative_time,
                         duration: scene_data.duration_secs,
-                        z_index: 0,
+                        z_index: scene_data.z_index,
                         audio_tracks: vec![],
                     });
                 cumulative_time += scene_data.duration_secs;
@@ -373,6 +379,9 @@ fn build_node_recursive(
 
         // Apply Transform
         apply_transform_map(&mut node.transform, &node_def.transform);
+        if let Some(z_index) = node_def.style.z_index {
+            node.z_index = z_index;
+        }
 
         // Apply Animations (Must be done after layout/transform setup as requested)
         apply_animations(&mut node.element, &node_def.animations);
@@ -409,20 +418,41 @@ fn build_node_recursive(
 
         // Apply Audio Bindings
         for binding in &node_def.audio_bindings {
-            if let Some(&track_idx) = track_id_map.get(&binding.audio_id) {
-                let core_binding = AudioBinding {
-                    track_id: track_idx,
-                    band: binding.band.clone(),
-                    property: binding.property.clone(),
-                    min_value: binding.min_value,
-                    max_value: binding.max_value,
-                    smoothing: binding.smoothing,
-                    prev_value: binding.min_value,
-                };
-                node.audio_bindings.push(core_binding);
-            } else {
-                // tracing::warn!("Audio binding references missing track: {}", binding.audio_id);
+            let track_idx = *track_id_map.get(&binding.audio_id).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Node '{}' references unknown audio track id '{}'",
+                    node_def.id,
+                    binding.audio_id
+                )
+            })?;
+
+            if binding.max_value < binding.min_value {
+                return Err(anyhow::anyhow!(
+                    "Node '{}' has invalid audio binding range: min_value ({}) must be <= max_value ({})",
+                    node_def.id,
+                    binding.min_value,
+                    binding.max_value
+                ));
             }
+
+            if !(0.0..=1.0).contains(&binding.smoothing) {
+                return Err(anyhow::anyhow!(
+                    "Node '{}' has invalid audio smoothing {}. Expected range: 0.0 to 1.0",
+                    node_def.id,
+                    binding.smoothing
+                ));
+            }
+
+            let core_binding = AudioBinding {
+                track_id: track_idx,
+                band: binding.band.as_str().to_string(),
+                property: binding.property.as_str().to_string(),
+                min_value: binding.min_value,
+                max_value: binding.max_value,
+                smoothing: binding.smoothing,
+                prev_value: binding.min_value,
+            };
+            node.audio_bindings.push(core_binding);
         }
     }
 
@@ -435,6 +465,46 @@ fn build_node_recursive(
     }
 
     Ok(id)
+}
+
+#[derive(Clone)]
+struct PipelineAssetLoader {
+    inner: Arc<dyn AssetLoader>,
+    search_roots: Vec<String>,
+    default_font: Option<String>,
+}
+
+impl AssetLoader for PipelineAssetLoader {
+    fn load_bytes(&self, path: &str) -> Result<Vec<u8>> {
+        if let Ok(bytes) = self.inner.load_bytes(path) {
+            return Ok(bytes);
+        }
+
+        if !Path::new(path).is_absolute() {
+            for root in &self.search_roots {
+                let candidate = Path::new(root).join(path);
+                let candidate_str = candidate.to_string_lossy();
+                if let Ok(bytes) = self.inner.load_bytes(&candidate_str) {
+                    return Ok(bytes);
+                }
+            }
+        }
+
+        Err(anyhow::anyhow!(
+            "Asset not found: {} (searched default loader and {} configured asset search paths)",
+            path,
+            self.search_roots.len()
+        ))
+    }
+
+    fn load_font_fallback(&self) -> Option<Vec<u8>> {
+        if let Some(font_path) = &self.default_font {
+            if let Ok(bytes) = self.load_bytes(font_path) {
+                return Some(bytes);
+            }
+        }
+        self.inner.load_font_fallback()
+    }
 }
 
 fn apply_animations(element: &mut Box<dyn Element>, animations: &[Animation]) {
