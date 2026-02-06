@@ -11,7 +11,7 @@ let scene = movie.add_scene(3.033);
 let container = scene.add_box(#{
     width: 1920.0,
     height: 1920.0,
-    bg_color: "#FFFFFF"  // White background ("normal" mode on LottieLab)
+    bg_color: "#F1F2F5"  // Light gray to match official LottieLab export
 });
 
 // Load the heart_eyes.json Lottie animation

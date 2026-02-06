@@ -99,6 +99,10 @@ fn test_lottie_context_integration() {
         root,
         view_matrix: glam::Mat4::IDENTITY,
         projection_matrix: glam::Mat4::IDENTITY,
+        audio_events: Vec::new(),
+        data_bindings: Vec::new(),
+        data_sources: Vec::new(),
+        sound_assets: Vec::new(),
     };
 
     // 2. Render

@@ -6,7 +6,12 @@
 pub mod property;
 pub mod wiggle;
 
-pub use property::{AnimatedProperty, LayerObject, PropertyObject, PropertyValue};
+#[cfg(feature = "expressions")]
+pub use property::TransformSampler;
+pub use property::{
+    AnimatedProperty, CompObject, ControlValue, EffectObject, LayerObject, PropertyObject,
+    PropertyValue, TransformObject,
+};
 pub use wiggle::{wiggle_property_value, wiggle_property_value_with_amps, WiggleState};
 
 #[cfg(feature = "expressions")]
@@ -18,7 +23,9 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 
 /// Loop type for expressions
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "expressions")]
+#[derive(boa_gc::Trace, boa_gc::Finalize)]
 pub enum LoopType {
     Cycle,
     PingPong,
@@ -214,7 +221,7 @@ impl ExpressionEvaluator {
                             }
                         }
                     }
-                    Ok(vec)
+                    Ok(vec.clone())
                 }),
             )
             .unwrap();
@@ -273,7 +280,7 @@ impl ExpressionEvaluator {
 
                     if let (Some(a_arr), Some(b_arr)) = (a.as_object(), b.as_object()) {
                         if a_arr.is_array() && b_arr.is_array() {
-                            let get_component =
+                            let mut get_component =
                                 |arr: &boa_engine::object::JsObject, idx: usize| -> f64 {
                                     arr.get(idx, context)
                                         .ok()
@@ -312,7 +319,7 @@ impl ExpressionEvaluator {
 
                     if let (Some(from_arr), Some(to_arr)) = (from.as_object(), to.as_object()) {
                         if from_arr.is_array() && to_arr.is_array() {
-                            let get_component =
+                            let mut get_component =
                                 |arr: &boa_engine::object::JsObject, idx: usize| -> f64 {
                                     arr.get(idx, context)
                                         .ok()
@@ -356,6 +363,51 @@ impl ExpressionEvaluator {
                 }),
             )
             .unwrap();
+
+        // Interpolation functions: linear, ease, easeIn, easeOut
+        // linear(t, tMin, tMax, value1, value2)
+        context
+            .register_global_callable(
+                js_string!("linear"),
+                1,
+                NativeFunction::from_fn_ptr(|_this, args, context| {
+                    helper_interpolate(args, context, InterpolationType::Linear)
+                }),
+            )
+            .unwrap();
+
+        // ease(t, tMin, tMax, value1, value2) - uses easeInOut interpolation
+        context
+            .register_global_callable(
+                js_string!("ease"),
+                1,
+                NativeFunction::from_fn_ptr(|_this, args, context| {
+                    helper_interpolate(args, context, InterpolationType::Ease)
+                }),
+            )
+            .unwrap();
+
+        // easeIn(t, tMin, tMax, value1, value2)
+        context
+            .register_global_callable(
+                js_string!("easeIn"),
+                1,
+                NativeFunction::from_fn_ptr(|_this, args, context| {
+                    helper_interpolate(args, context, InterpolationType::EaseIn)
+                }),
+            )
+            .unwrap();
+
+        // easeOut(t, tMin, tMax, value1, value2)
+        context
+            .register_global_callable(
+                js_string!("easeOut"),
+                1,
+                NativeFunction::from_fn_ptr(|_this, args, context| {
+                    helper_interpolate(args, context, InterpolationType::EaseOut)
+                }),
+            )
+            .unwrap();
     }
 
     pub fn set_loop_out_type(&mut self, loop_type: LoopType) {
@@ -391,64 +443,36 @@ impl ExpressionEvaluator {
             .register_global_property(js_string!("time"), JsValue::new(time), Attribute::all())
             .map_err(|e| format!("Failed to register time: {}", e))?;
 
-        // LoopOut with type support
-        let loop_out_type = self.loop_out_type;
+        // LoopOut - simpler implementation without complex captures
         self.context
             .register_global_callable(
                 js_string!("loopOut"),
                 0,
-                NativeFunction::from_copy_closure_with_captures(
-                    |_this, args, loop_type: &LoopType, context| {
-                        let requested_type = if args.len() > 0 {
-                            if let Ok(s) = args.get_or_undefined(0).to_string(context) {
-                                LoopType::from_str(&s.to_std_string().unwrap_or_default())
-                            } else {
-                                *loop_type
-                            }
-                        } else {
-                            *loop_type
-                        };
-
-                        // For now, we return the loop value - the actual loop type
-                        // is handled in the pre-calculation phase in Animator::resolve
-                        let val = context
-                            .global_object()
-                            .get(js_string!("__loop_value"), context)
-                            .unwrap_or_default();
-                        Ok(val)
-                    },
-                    loop_out_type,
-                ),
+                NativeFunction::from_fn_ptr(|_this, args, context| {
+                    // The loop type is handled in pre-calculation phase
+                    // Just return the pre-calculated loop value
+                    let val = context
+                        .global_object()
+                        .get(js_string!("__loop_value"), context)
+                        .unwrap_or_default();
+                    Ok(val)
+                }),
             )
             .map_err(|e| format!("Failed to register loopOut: {}", e))?;
 
-        // LoopIn with type support
-        let loop_in_type = self.loop_in_type;
+        // LoopIn - simpler implementation
         self.context
             .register_global_callable(
                 js_string!("loopIn"),
                 0,
-                NativeFunction::from_copy_closure_with_captures(
-                    |_this, args, loop_type: &LoopType, context| {
-                        let requested_type = if args.len() > 0 {
-                            if let Ok(s) = args.get_or_undefined(0).to_string(context) {
-                                LoopType::from_str(&s.to_std_string().unwrap_or_default())
-                            } else {
-                                *loop_type
-                            }
-                        } else {
-                            *loop_type
-                        };
-
-                        // Return the loop value for loopIn
-                        let val = context
-                            .global_object()
-                            .get(js_string!("__loop_in_value"), context)
-                            .unwrap_or_default();
-                        Ok(val)
-                    },
-                    loop_in_type,
-                ),
+                NativeFunction::from_fn_ptr(|_this, args, context| {
+                    // Return the pre-calculated loopIn value
+                    let val = context
+                        .global_object()
+                        .get(js_string!("__loop_in_value"), context)
+                        .unwrap_or_default();
+                    Ok(val)
+                }),
             )
             .map_err(|e| format!("Failed to register loopIn: {}", e))?;
 
@@ -463,14 +487,20 @@ impl ExpressionEvaluator {
     }
 
     /// Evaluate expression with PropertyObject system for AE-exact behavior
+    ///
+    /// The `layer` parameter should include transform data for accessing properties
+    /// like `thisLayer.transform.position` in expressions.
+    /// The `comp` parameter enables access to other layers via `thisComp.layer(index)` or `thisComp.layer(name)`.
+    /// The `effects` parameter enables access to expression controls via `effect("Name")("Control")`.
     pub fn evaluate_on_property(
         &mut self,
         script: &str,
         property: &dyn AnimatedProperty,
         current_value: &PropertyValue,
         time: f64,
-        layer_index: i32,
-        layer_name: &str,
+        layer: &LayerObject,
+        comp: Option<&CompObject>,
+        effects: Option<&[EffectObject]>,
         loop_out_value: Option<&PropertyValue>,
         loop_in_value: Option<&PropertyValue>,
         director_vars: &DirectorVariableContext,
@@ -480,10 +510,8 @@ impl ExpressionEvaluator {
 
         let prop_obj = PropertyObject::new(current_value.clone(), time, velocity, speed, None);
 
-        let layer_obj = LayerObject::new(layer_index, layer_name);
-
         let prop_js = create_property_object(&prop_obj, property, &mut self.context)?;
-        let layer_js = create_layer_object(&layer_obj, &mut self.context)?;
+        let layer_js = create_layer_object(layer, &mut self.context, time)?;
 
         self.context
             .register_global_property(
@@ -500,7 +528,7 @@ impl ExpressionEvaluator {
         self.context
             .register_global_property(
                 js_string!("index"),
-                JsValue::new(layer_index as f64),
+                JsValue::new(layer.index() as f64),
                 Attribute::all(),
             )
             .map_err(|e| format!("Failed to register index: {}", e))?;
@@ -540,6 +568,19 @@ impl ExpressionEvaluator {
         self.context
             .register_global_property(js_string!("thisDirector"), director_js, Attribute::all())
             .map_err(|e| format!("Failed to register thisDirector: {}", e))?;
+
+        // Register thisComp object for cross-layer references
+        if let Some(comp_obj) = comp {
+            let comp_js = create_comp_object(comp_obj, &mut self.context, time)?;
+            self.context
+                .register_global_property(js_string!("thisComp"), comp_js, Attribute::all())
+                .map_err(|e| format!("Failed to register thisComp: {}", e))?;
+        }
+
+        // Register effect() function for expression controls
+        if let Some(effects_list) = effects {
+            register_effect_function(effects_list, &mut self.context)?;
+        }
 
         let result = self
             .context
@@ -599,8 +640,6 @@ fn create_director_variables_object(
     ctx: &DirectorVariableContext,
     context: &mut Context,
 ) -> Result<JsValue, String> {
-    let mut obj_init = ObjectInitializer::new(context);
-
     // Add all variables with proper priority (local overrides scene overrides global)
     let mut all_vars: std::collections::HashMap<String, &PropertyValue> =
         std::collections::HashMap::new();
@@ -621,9 +660,17 @@ fn create_director_variables_object(
     }
 
     // Add all properties to JS object
-    for (key, value) in all_vars {
-        let js_val = value.to_js_value(context);
-        obj_init.property(js_string!(&key), js_val, Attribute::all());
+    // Collect JS values first to avoid double mutable borrow of context
+    // Must collect values BEFORE creating ObjectInitializer since it holds context ref
+    let js_values: Vec<_> = all_vars
+        .iter()
+        .map(|(k, v)| (k.clone(), v.to_js_value(context)))
+        .collect();
+
+    // Now create ObjectInitializer after all context borrows are done
+    let mut obj_init = ObjectInitializer::new(context);
+    for (key, js_val) in js_values {
+        obj_init.property(js_string!(key.as_str()), js_val, Attribute::all());
     }
 
     let obj = obj_init.build();
@@ -635,6 +682,24 @@ fn create_director_context_object(
     ctx: &DirectorVariableContext,
     context: &mut Context,
 ) -> Result<JsValue, String> {
+    // Build nested scene object first to avoid overlapping mutable borrows
+    let scene_obj = {
+        let mut scene_init = ObjectInitializer::new(context);
+        scene_init
+            .property(
+                js_string!("name"),
+                JsValue::from(js_string!(ctx.scene_name.as_str())),
+                Attribute::all(),
+            )
+            .property(
+                js_string!("duration"),
+                JsValue::new(ctx.scene_duration),
+                Attribute::all(),
+            )
+            .build()
+    };
+
+    // Now create parent object after scene_init borrow is released
     let mut obj_init = ObjectInitializer::new(context);
 
     obj_init.property(
@@ -648,20 +713,6 @@ fn create_director_context_object(
         JsValue::new(ctx.scene_duration),
         Attribute::all(),
     );
-
-    let scene_init = ObjectInitializer::new(context);
-    let scene_obj = scene_init
-        .property(
-            js_string!("name"),
-            JsValue::from(js_string!(&ctx.scene_name)),
-            Attribute::all(),
-        )
-        .property(
-            js_string!("duration"),
-            JsValue::new(ctx.scene_duration),
-            Attribute::all(),
-        )
-        .build();
 
     obj_init.property(
         js_string!("scene"),
@@ -810,7 +861,20 @@ fn create_property_object(
 }
 
 #[cfg(feature = "expressions")]
-fn create_layer_object(layer: &LayerObject, context: &mut Context) -> Result<JsValue, String> {
+fn create_layer_object(
+    layer: &LayerObject,
+    context: &mut Context,
+    time: f64,
+) -> Result<JsValue, String> {
+    // Pre-create the transform object before creating ObjectInitializer
+    // to avoid double mutable borrow of context
+    let transform = layer.transform();
+    let transform_obj = create_transform_object(transform, context, time)?;
+
+    // Pre-create name JS value
+    let name_js = JsValue::from(js_string!(layer.name()));
+
+    // Now create ObjectInitializer after all dependent objects are created
     let mut obj_init = ObjectInitializer::new(context);
 
     obj_init.property(
@@ -819,37 +883,33 @@ fn create_layer_object(layer: &LayerObject, context: &mut Context) -> Result<JsV
         Attribute::all(),
     );
 
-    obj_init.property(
-        js_string!("name"),
-        JsValue::from(js_string!(layer.name())),
-        Attribute::all(),
-    );
+    obj_init.property(js_string!("name"), name_js, Attribute::all());
 
     // Add coordinate transformation methods
     // For now, these are identity transforms - full implementation would need
     // access to the layer's transform hierarchy
-    let to_world_fn = NativeFunction::from_fn_ptr(|_this, args, ctx| {
+    let to_world_fn = NativeFunction::from_fn_ptr(|_this, args, _ctx| {
         let point = args.get_or_undefined(0);
         // Identity for now - just return the point
         // Full implementation would apply layer transform matrix
-        Ok(point)
+        Ok(point.clone())
     });
 
-    let from_world_fn = NativeFunction::from_fn_ptr(|_this, args, ctx| {
+    let from_world_fn = NativeFunction::from_fn_ptr(|_this, args, _ctx| {
         let point = args.get_or_undefined(0);
         // Inverse of toWorld
-        Ok(point)
+        Ok(point.clone())
     });
 
-    let to_comp_fn = NativeFunction::from_fn_ptr(|_this, args, ctx| {
+    let to_comp_fn = NativeFunction::from_fn_ptr(|_this, args, _ctx| {
         let point = args.get_or_undefined(0);
         // Composition space is typically same as world for 2D
-        Ok(point)
+        Ok(point.clone())
     });
 
-    let from_comp_fn = NativeFunction::from_fn_ptr(|_this, args, ctx| {
+    let from_comp_fn = NativeFunction::from_fn_ptr(|_this, args, _ctx| {
         let point = args.get_or_undefined(0);
-        Ok(point)
+        Ok(point.clone())
     });
 
     obj_init.function(to_world_fn, js_string!("toWorld"), 1);
@@ -857,8 +917,268 @@ fn create_layer_object(layer: &LayerObject, context: &mut Context) -> Result<JsV
     obj_init.function(to_comp_fn, js_string!("toComp"), 1);
     obj_init.function(from_comp_fn, js_string!("fromComp"), 1);
 
+    // Add transform property group with AE-exact accessors
+    obj_init.property(js_string!("transform"), transform_obj, Attribute::all());
+
     let obj = obj_init.build();
     Ok(JsValue::from(obj))
+}
+
+#[cfg(feature = "expressions")]
+fn create_transform_object(
+    transform: &TransformObject,
+    context: &mut Context,
+    time: f64,
+) -> Result<JsValue, String> {
+    // Pre-convert all values to JsValue before creating ObjectInitializer
+    // to avoid borrow checker issues
+    let position_js = transform.position(time).to_js_value(context);
+    let scale_js = transform.scale(time).to_js_value(context);
+    let rotation_js = transform.rotation(time).to_js_value(context);
+    let opacity_js = transform.opacity(time).to_js_value(context);
+    let anchor_point_js = transform.anchor_point(time).to_js_value(context);
+
+    // Pre-convert 3D rotation values if needed
+    let has_3d_rotation = transform.rotation_x(time).as_scalar() != 0.0
+        || transform.rotation_y(time).as_scalar() != 0.0
+        || transform.rotation_z(time).as_scalar() != 0.0;
+
+    let (rotation_x_js, rotation_y_js, rotation_z_js) = if has_3d_rotation {
+        (
+            Some(transform.rotation_x(time).to_js_value(context)),
+            Some(transform.rotation_y(time).to_js_value(context)),
+            Some(transform.rotation_z(time).to_js_value(context)),
+        )
+    } else {
+        (None, None, None)
+    };
+
+    // Now create ObjectInitializer after all borrows are done
+    let mut obj_init = ObjectInitializer::new(context);
+
+    obj_init.property(js_string!("position"), position_js, Attribute::all());
+    obj_init.property(js_string!("scale"), scale_js, Attribute::all());
+    obj_init.property(js_string!("rotation"), rotation_js, Attribute::all());
+    obj_init.property(js_string!("opacity"), opacity_js, Attribute::all());
+    obj_init.property(js_string!("anchorPoint"), anchor_point_js, Attribute::all());
+
+    // Add 3D rotation properties if present
+    if let (Some(rx), Some(ry), Some(rz)) = (rotation_x_js, rotation_y_js, rotation_z_js) {
+        obj_init.property(js_string!("xRotation"), rx, Attribute::all());
+        obj_init.property(js_string!("yRotation"), ry, Attribute::all());
+        obj_init.property(js_string!("zRotation"), rz, Attribute::all());
+    }
+
+    let obj = obj_init.build();
+    Ok(JsValue::from(obj))
+}
+
+#[cfg(feature = "expressions")]
+fn create_comp_object(
+    comp: &CompObject,
+    context: &mut Context,
+    time: f64,
+) -> Result<JsValue, String> {
+    let mut obj_init = ObjectInitializer::new(context);
+
+    // Create captures struct with comp and time
+    #[derive(Clone, Finalize)]
+    struct CompCaptures {
+        comp: CompObject,
+        time: f64,
+    }
+
+    unsafe impl Trace for CompCaptures {
+        unsafe fn trace(&self, _tracer: &mut boa_gc::Tracer) {
+            // CompObject doesn't contain GC references
+        }
+        unsafe fn trace_non_roots(&self) {}
+        fn run_finalizer(&self) {}
+    }
+
+    let captures = CompCaptures {
+        comp: comp.clone(),
+        time,
+    };
+
+    // layer(index) - get layer by index number
+    let layer_by_index_fn = NativeFunction::from_copy_closure_with_captures(
+        |_this, args, captures: &CompCaptures, ctx| {
+            let arg = args.get_or_undefined(0);
+
+            // Check if argument is a number (index) or string (name)
+            if let Some(index) = arg.as_number() {
+                // Access by index: thisComp.layer(1)
+                let idx = index as i32;
+                if let Some(layer) = captures.comp.layer_by_index(idx) {
+                    match create_layer_object(layer, ctx, captures.time) {
+                        Ok(layer_js) => return Ok(layer_js),
+                        Err(_) => return Ok(JsValue::undefined()),
+                    }
+                }
+            } else if let Some(name_str) = arg.as_string() {
+                // Access by name: thisComp.layer("Circle")
+                let name = name_str.to_std_string_escaped();
+                if let Some(layer) = captures.comp.layer_by_name(&name) {
+                    match create_layer_object(layer, ctx, captures.time) {
+                        Ok(layer_js) => return Ok(layer_js),
+                        Err(_) => return Ok(JsValue::undefined()),
+                    }
+                }
+            }
+
+            Ok(JsValue::undefined())
+        },
+        captures,
+    );
+
+    obj_init.function(layer_by_index_fn, js_string!("layer"), 1);
+
+    // numLayers property - total number of layers in the composition
+    obj_init.property(
+        js_string!("numLayers"),
+        JsValue::new(comp.num_layers() as f64),
+        Attribute::all(),
+    );
+
+    let obj = obj_init.build();
+    Ok(JsValue::from(obj))
+}
+
+#[cfg(feature = "expressions")]
+fn create_effect_object(effect: &EffectObject, context: &mut Context) -> Result<JsValue, String> {
+    let mut obj_init = ObjectInitializer::new(context);
+
+    // Store effect name for display
+    let effect_name = js_string!(effect.name());
+    obj_init.property(
+        js_string!("name"),
+        JsValue::from(effect_name),
+        Attribute::all(),
+    );
+
+    // Create captures struct with effect data
+    #[derive(Clone, Finalize)]
+    struct EffectCaptures {
+        effect: EffectObject,
+    }
+
+    unsafe impl Trace for EffectCaptures {
+        unsafe fn trace(&self, _tracer: &mut boa_gc::Tracer) {
+            // EffectObject doesn't contain GC references
+        }
+        unsafe fn trace_non_roots(&self) {}
+        fn run_finalizer(&self) {}
+    }
+
+    let captures = EffectCaptures {
+        effect: effect.clone(),
+    };
+
+    // The effect object is called like a function: effect("Name")("Control Name")
+    // This returns the control value. We implement this by making the object callable.
+    let control_accessor_fn = NativeFunction::from_copy_closure_with_captures(
+        |_this, args, captures: &EffectCaptures, ctx| {
+            let arg = args.get_or_undefined(0);
+
+            // Check if argument is a string (control name) or number (control index)
+            let control_value = if let Some(name_str) = arg.as_string() {
+                // Access by name: effect("Slider Control")("Slider")
+                let name = name_str.to_std_string_escaped();
+                captures.effect.control_by_name(&name)
+            } else if let Some(index) = arg.as_number() {
+                // Access by index: effect("Slider Control")(0)
+                let idx = index as u32;
+                captures.effect.control_by_index(idx)
+            } else {
+                None
+            };
+
+            if let Some(control) = control_value {
+                // Return the control value as a PropertyValue
+                Ok(control.value().to_js_value(ctx))
+            } else {
+                // Return undefined if control not found
+                Ok(JsValue::undefined())
+            }
+        },
+        captures,
+    );
+
+    // Register the callable property - in AE, effect("Name")("Control") returns the value directly
+    // We implement this by adding the function as "__call" and also making it the default behavior
+    obj_init.function(control_accessor_fn, js_string!("__call"), 1);
+
+    // Also expose numControls property
+    obj_init.property(
+        js_string!("numControls"),
+        JsValue::new(effect.num_controls() as f64),
+        Attribute::all(),
+    );
+
+    let obj = obj_init.build();
+    Ok(JsValue::from(obj))
+}
+
+/// Register the global `effect()` function that returns effect objects by name
+#[cfg(feature = "expressions")]
+fn register_effect_function(effects: &[EffectObject], context: &mut Context) -> Result<(), String> {
+    // Create captures struct with effects list
+    #[derive(Clone, Finalize)]
+    struct EffectsCaptures {
+        effects: Vec<EffectObject>,
+    }
+
+    unsafe impl Trace for EffectsCaptures {
+        unsafe fn trace(&self, _tracer: &mut boa_gc::Tracer) {
+            // EffectObject doesn't contain GC references
+        }
+        unsafe fn trace_non_roots(&self) {}
+        fn run_finalizer(&self) {}
+    }
+
+    let captures = EffectsCaptures {
+        effects: effects.to_vec(),
+    };
+
+    // effect(name_or_index) - returns an EffectObject
+    let effect_fn = NativeFunction::from_copy_closure_with_captures(
+        |_this, args, captures: &EffectsCaptures, ctx| {
+            let arg = args.get_or_undefined(0);
+
+            // Find effect by name or index
+            let effect = if let Some(name_str) = arg.as_string() {
+                // Access by name: effect("Slider Control")
+                let name = name_str.to_std_string_escaped();
+                captures.effects.iter().find(|e| e.name() == name)
+            } else if let Some(index) = arg.as_number() {
+                // Access by index: effect(0) (1-based in AE, 0-based in our Vec)
+                let idx = (index as usize).saturating_sub(1);
+                captures.effects.get(idx)
+            } else {
+                None
+            };
+
+            if let Some(effect_obj) = effect {
+                // Return the effect object
+                match create_effect_object(effect_obj, ctx) {
+                    Ok(effect_js) => Ok(effect_js),
+                    Err(_) => Ok(JsValue::undefined()),
+                }
+            } else {
+                // Return undefined if effect not found
+                Ok(JsValue::undefined())
+            }
+        },
+        captures,
+    );
+
+    // Register the function globally
+    context
+        .register_global_callable(js_string!("effect"), 1, effect_fn)
+        .map_err(|e| format!("Failed to register effect function: {}", e))?;
+
+    Ok(())
 }
 
 #[cfg(feature = "expressions")]
@@ -969,4 +1289,118 @@ fn helper_div(a: &JsValue, b: &JsValue, context: &mut Context) -> JsResult<JsVal
     let num_a = a.to_number(context)?;
     let num_b = b.to_number(context)?;
     Ok(JsValue::new(num_a / num_b))
+}
+
+/// Interpolation types for ease functions
+#[cfg(feature = "expressions")]
+#[derive(Clone, Copy)]
+enum InterpolationType {
+    Linear,
+    Ease,
+    EaseIn,
+    EaseOut,
+}
+
+#[cfg(feature = "expressions")]
+fn helper_interpolate(
+    args: &[JsValue],
+    context: &mut Context,
+    interp_type: InterpolationType,
+) -> JsResult<JsValue> {
+    // AE interpolation functions: fn(t, tMin, tMax, value1, value2)
+    // t: current time/input value
+    // tMin: minimum input range
+    // tMax: maximum input range
+    // value1: output when t <= tMin
+    // value2: output when t >= tMax
+
+    if args.len() < 5 {
+        return Ok(JsValue::undefined());
+    }
+
+    let t = args.get_or_undefined(0).to_number(context)?;
+    let t_min = args.get_or_undefined(1).to_number(context)?;
+    let t_max = args.get_or_undefined(2).to_number(context)?;
+    let value1 = &args.get_or_undefined(3);
+    let value2 = &args.get_or_undefined(4);
+
+    // Calculate normalized position (0 to 1)
+    let range = t_max - t_min;
+    let normalized = if range == 0.0 {
+        0.0
+    } else {
+        ((t - t_min) / range).clamp(0.0, 1.0)
+    };
+
+    // Apply easing to the normalized value
+    let eased = match interp_type {
+        InterpolationType::Linear => normalized,
+        InterpolationType::Ease => ease_in_out(normalized),
+        InterpolationType::EaseIn => ease_in(normalized),
+        InterpolationType::EaseOut => ease_out(normalized),
+    };
+
+    // Interpolate between value1 and value2
+    interpolate_values(value1, value2, eased, context)
+}
+
+/// Linear interpolation between two values
+#[cfg(feature = "expressions")]
+fn interpolate_values(
+    a: &JsValue,
+    b: &JsValue,
+    t: f64,
+    context: &mut Context,
+) -> JsResult<JsValue> {
+    // Handle array interpolation (vectors)
+    if let (Some(obj_a), Some(obj_b)) = (a.as_object(), b.as_object()) {
+        if obj_a.is_array() && obj_b.is_array() {
+            let len_a = obj_a
+                .get(js_string!("length"), context)?
+                .to_number(context)? as u64;
+            let len_b = obj_b
+                .get(js_string!("length"), context)?
+                .to_number(context)? as u64;
+            let len = std::cmp::min(len_a, len_b);
+
+            let mut result = Vec::new();
+            for i in 0..len {
+                let val_a = obj_a.get(i, context)?.to_number(context)?;
+                let val_b = obj_b.get(i, context)?.to_number(context)?;
+                let interpolated = val_a + (val_b - val_a) * t;
+                result.push(JsValue::new(interpolated));
+            }
+            return Ok(JsArray::from_iter(result, context).into());
+        }
+    }
+
+    // Scalar interpolation
+    let val_a = a.to_number(context)?;
+    let val_b = b.to_number(context)?;
+    Ok(JsValue::new(val_a + (val_b - val_a) * t))
+}
+
+/// Standard ease function (easeInOut) using cubic-bezier-like interpolation
+#[cfg(feature = "expressions")]
+fn ease_in_out(t: f64) -> f64 {
+    // Cubic ease in-out: smoother than quadratic
+    if t < 0.5 {
+        4.0 * t * t * t
+    } else {
+        1.0 - ((-2.0 * t + 2.0).powi(3) / 2.0)
+    }
+}
+
+/// Ease in function (slow start, fast end)
+#[cfg(feature = "expressions")]
+fn ease_in(t: f64) -> f64 {
+    // Quadratic ease in
+    t * t
+}
+
+/// Ease out function (fast start, slow end)
+#[cfg(feature = "expressions")]
+fn ease_out(t: f64) -> f64 {
+    // Quadratic ease out
+    1.0 - (1.0 - t) * (1.0 - t)
 }

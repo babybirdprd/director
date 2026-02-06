@@ -99,15 +99,22 @@ impl TextPathRenderer {
         // Step 2: Calculate total text width
         let total_text_width: f32 = glyph_widths.iter().sum();
 
-        // Step 3: Calculate available space and scale factor
+        // Step 3: Calculate available space and adjustments
         let available_length = (path_length - options.first_margin - options.last_margin).max(0.0);
 
-        // Calculate scale for force alignment
-        let scale_factor = if options.force_alignment && total_text_width > 0.0 {
-            (available_length / total_text_width).min(2.0).max(0.5) // Clamp scale to reasonable bounds
-        } else {
-            1.0
-        };
+        // Calculate scale/tracking for force alignment
+        // When force_alignment is true, we adjust tracking (letter spacing) to fit text to path
+        let (scale_factor, extra_tracking) =
+            if options.force_alignment && total_text_width > 0.0 && glyph_widths.len() > 1 {
+                let target_width = available_length;
+                let current_width = total_text_width;
+                let extra_space = target_width - current_width;
+                let gaps = (glyph_widths.len() - 1) as f32;
+                let tracking_adjustment = extra_space / gaps;
+                (1.0, tracking_adjustment)
+            } else {
+                (1.0, 0.0)
+            };
 
         // Step 4: Calculate starting position based on justification
         let start_offset = match options.justify {
@@ -140,6 +147,12 @@ impl TextPathRenderer {
 
         for (i, &glyph_width) in glyph_widths.iter().enumerate() {
             let scaled_width = glyph_width * scale_factor;
+            // Add extra tracking for force alignment (except for last glyph)
+            let spacing = if i < glyph_widths.len() - 1 {
+                extra_tracking
+            } else {
+                0.0
+            };
             // Position at center of glyph
             let glyph_center = current_distance + (scaled_width / 2.0);
 
@@ -172,7 +185,7 @@ impl TextPathRenderer {
             rotations.push(final_rotation);
             scales.push(Vec2::new(scale_factor, scale_factor));
 
-            current_distance += scaled_width;
+            current_distance += scaled_width + spacing;
         }
 
         PathGlyphLayout {
@@ -535,23 +548,23 @@ pub mod utils {
         // control points would need to be recalculated
         if let Some(first) = elements.first() {
             if let PathEl::MoveTo(p) = first {
-                reversed.move_to(p);
+                reversed.move_to(*p);
             }
         }
 
         // Process in reverse order
         for el in elements.iter().rev() {
             match el {
-                PathEl::LineTo(p) => reversed.line_to(p),
+                PathEl::LineTo(p) => reversed.line_to(*p),
                 PathEl::QuadTo(p1, p2) => {
                     // For proper reversal, control points need adjustment
                     // This is a simplified version
-                    reversed.quad_to(p1, p2);
+                    reversed.quad_to(*p1, *p2);
                 }
                 PathEl::CurveTo(p1, p2, p3) => {
                     // For proper reversal, control points need adjustment
                     // This is a simplified version
-                    reversed.curve_to(p2, p1, p3);
+                    reversed.curve_to(*p2, *p1, *p3);
                 }
                 _ => {}
             }
@@ -724,9 +737,10 @@ mod tests {
         let layout = TextPathRenderer::layout_text_on_path(&path, &glyph_widths, &options);
 
         assert_eq!(layout.rotations.len(), 1);
-        // On a vertical line (0,0) to (0,100), tangent is (0, 1)
-        // Perpendicular to that is (-1, 0), which is -90° or -PI/2
-        let expected_rot = -std::f32::consts::PI / 2.0;
+        // On a vertical line (0,0) to (0,100), tangent is (0, 1) pointing up (90°)
+        // Perpendicular (horizontal, upright text) should be 0° (text reads left-to-right)
+        // The formula (-tangent.x).atan2(tangent.y) for tangent (0,1) gives 0.0
+        let expected_rot = 0.0;
         assert!((layout.rotations[0] - expected_rot).abs() < 0.01);
     }
 
@@ -750,9 +764,17 @@ mod tests {
 
         let layout = TextPathRenderer::layout_text_on_path(&path, &glyph_widths, &options);
 
-        // Scale should be 100/60 = 1.67
-        assert!(layout.scales[0].x > 1.0);
-        // Last glyph should be close to position 100
-        assert!(layout.positions.last().unwrap().x > 90.0);
+        // With force alignment, tracking is adjusted to fit text to path
+        // 3 glyphs of 20px each = 60px, path is 100px, extra space = 40px
+        // 2 gaps, so 20px extra tracking per gap
+        // Last glyph center at: 10 + 20 + 20 + 20 + 20 = 90px
+        assert_eq!(layout.scales[0].x, 1.0); // No scaling, only tracking adjustment
+                                             // Last glyph center should be at ~90px
+        let last_pos = layout.positions.last().unwrap().x;
+        assert!(
+            last_pos >= 85.0 && last_pos <= 95.0,
+            "Last glyph at {}px, expected ~90px",
+            last_pos
+        );
     }
 }

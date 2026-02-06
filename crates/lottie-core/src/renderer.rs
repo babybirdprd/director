@@ -1,5 +1,6 @@
 use glam::{Mat4, Vec2, Vec3, Vec4};
 use kurbo::BezPath;
+use serde_json::Value as JsonValue;
 
 #[derive(Clone, Debug)]
 pub struct RenderTree {
@@ -8,6 +9,10 @@ pub struct RenderTree {
     pub root: RenderNode,
     pub view_matrix: Mat4,
     pub projection_matrix: Mat4,
+    pub audio_events: Vec<RuntimeAudioEvent>,
+    pub data_bindings: Vec<RuntimeDataBinding>,
+    pub data_sources: Vec<RuntimeDataSource>,
+    pub sound_assets: Vec<RuntimeSoundAsset>,
 }
 
 impl RenderTree {
@@ -58,8 +63,45 @@ impl RenderTree {
             root,
             view_matrix: Mat4::IDENTITY,
             projection_matrix: Mat4::IDENTITY,
+            audio_events: Vec::new(),
+            data_bindings: Vec::new(),
+            data_sources: Vec::new(),
+            sound_assets: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeAudioEvent {
+    pub layer_name: Option<String>,
+    pub ref_id: Option<String>,
+    pub sound_path: Option<String>,
+    pub start_frame: f32,
+    pub end_frame: f32,
+    pub stretch: f32,
+    pub level: Vec<f32>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeDataBinding {
+    pub layer_name: Option<String>,
+    pub ref_id: Option<String>,
+    pub source_path: Option<String>,
+    pub payload: Option<JsonValue>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeDataSource {
+    pub id: String,
+    pub path: Option<String>,
+    pub payload: Option<JsonValue>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeSoundAsset {
+    pub id: String,
+    pub path: Option<String>,
+    pub byte_len: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -206,6 +248,7 @@ pub struct Mask {
     pub opacity: f32,
     pub expansion: f32,
     pub inverted: bool,
+    pub feather: Vec2, // Feather radius in x and y directions
 }
 
 #[derive(Clone, Debug)]
@@ -260,6 +303,62 @@ pub enum Effect {
         out_black: f32,
         out_white: f32,
     },
+    RadialWipe {
+        completion: f32,  // 0..1
+        start_angle: f32, // degrees
+        center: Vec2,
+        wipe: f32,    // direction/style control
+        feather: f32, // 0..1
+    },
+    Matte3 {
+        channel: i32,
+        invert: bool,
+        show_mask: bool,
+        premultiply: bool,
+    },
+    Twirl {
+        angle: f32, // degrees
+        radius: f32,
+        center: Vec2,
+    },
+    MeshWarp {
+        rows: f32,
+        columns: f32,
+        quality: f32,
+    },
+    Wavy {
+        radius: f32,
+        center: Vec2,
+        conversion_type: i32,
+        speed: i32,
+        width: f32,
+        height: f32,
+        phase: f32,
+    },
+    Spherize {
+        radius: f32,
+        center: Vec2,
+    },
+    Puppet {
+        engine: i32,
+        refinement: f32,
+        on_transparent: i32,
+    },
+    CustomGroup {
+        name: Option<String>,
+        controls: Vec<CustomEffectControl>,
+    },
+    Unsupported {
+        ty: u8,
+        name: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub struct CustomEffectControl {
+    pub name: Option<String>,
+    pub ty: Option<u8>,
+    pub values: Vec<f32>,
 }
 
 #[derive(Clone, Debug)]

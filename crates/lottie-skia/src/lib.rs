@@ -8,10 +8,11 @@ use lottie_core::{
 };
 use skia_safe::color_filters::Clamp;
 use skia_safe::{
-    canvas::SaveLayerRec, color_filters, gradient_shader, image_filters, BlendMode, Canvas, ClipOp,
-    Color, Color4f, ColorChannel, Data, Font, FontMgr, FontStyle, Image as SkImage, Matrix, Paint,
-    PaintStyle, Path, PathBuilder, PathEffect, PathFillType, PathOp, Point, Rect, RuntimeEffect,
-    StrokeRec, TextBlob, TileMode, M44,
+    canvas::SaveLayerRec, color_filters, gradient_shader, image_filters,
+    runtime_effect::RuntimeShaderBuilder, surfaces, BlendMode, Canvas, ClipOp, Color, Color4f,
+    ColorChannel, Data, Font, FontMgr, FontStyle, Image as SkImage, Matrix, Paint, PaintStyle,
+    Path, PathBuilder, PathEffect, PathFillType, PathOp, Point, Rect, RuntimeEffect, StrokeRec,
+    TextBlob, TileMode, M44,
 };
 
 pub trait LottieContext: Send + Sync {
@@ -519,6 +520,21 @@ fn apply_masks(canvas: &Canvas, masks: &[lottie_core::Mask]) {
     if masks.is_empty() {
         return;
     }
+
+    // Check if any mask has feathering
+    let has_feather = masks.iter().any(|m| m.feather.x > 0.0 || m.feather.y > 0.0);
+
+    if has_feather {
+        // For feathered masks, we need to use a different approach
+        // We'll create an alpha mask with blur applied
+        apply_feathered_masks(canvas, masks);
+    } else {
+        // Use standard clipping for non-feathered masks (faster)
+        apply_standard_masks(canvas, masks);
+    }
+}
+
+fn apply_standard_masks(canvas: &Canvas, masks: &[lottie_core::Mask]) {
     let mut add_path = Path::new();
     let mut has_add = false;
     for mask in masks {
@@ -553,6 +569,107 @@ fn apply_masks(canvas: &Canvas, masks: &[lottie_core::Mask]) {
             }
             _ => {}
         }
+    }
+}
+
+fn apply_feathered_masks(canvas: &Canvas, masks: &[lottie_core::Mask]) {
+    // For feathered masks, we use a paint-based approach with blur
+    // This is more complex but supports soft edges
+
+    // Get canvas dimensions
+    let base_matrix = canvas.local_to_device_as_3x3();
+    let (canvas_width, canvas_height) = (base_matrix[0].abs() as i32, base_matrix[4].abs() as i32);
+    if canvas_width <= 0 || canvas_height <= 0 {
+        return;
+    }
+
+    // Create an offscreen surface for the mask
+    let mut mask_surface = match surfaces::raster_n32_premul((canvas_width, canvas_height)) {
+        Some(s) => s,
+        None => return,
+    };
+
+    let mask_canvas = mask_surface.canvas();
+    mask_canvas.clear(Color::TRANSPARENT);
+
+    // Draw the masks with feathering
+    for mask in masks {
+        let path = resolve_mask_path(mask);
+        let mut paint = Paint::default();
+
+        match mask.mode {
+            CoreMaskMode::Add => {
+                paint.set_color(Color::WHITE);
+                paint.set_alpha_f(mask.opacity);
+
+                // Apply feathering using blur
+                if mask.feather.x > 0.0 || mask.feather.y > 0.0 {
+                    let sigma_x = mask.feather.x * 0.5;
+                    let sigma_y = mask.feather.y * 0.5;
+                    let blur_filter = image_filters::blur(
+                        (sigma_x, sigma_y),
+                        skia_safe::TileMode::Clamp,
+                        None,
+                        None,
+                    );
+                    paint.set_image_filter(blur_filter);
+                }
+
+                mask_canvas.draw_path(&path, &paint);
+            }
+            CoreMaskMode::Subtract => {
+                // For subtract with feather, we draw black
+                paint.set_color(Color::BLACK);
+                paint.set_alpha_f(mask.opacity);
+
+                if mask.feather.x > 0.0 || mask.feather.y > 0.0 {
+                    let sigma_x = mask.feather.x * 0.5;
+                    let sigma_y = mask.feather.y * 0.5;
+                    let blur_filter = image_filters::blur(
+                        (sigma_x, sigma_y),
+                        skia_safe::TileMode::Clamp,
+                        None,
+                        None,
+                    );
+                    paint.set_image_filter(blur_filter);
+                }
+
+                mask_canvas.draw_path(&path, &paint);
+            }
+            _ => {
+                // Other modes - draw normally
+                paint.set_color(Color::WHITE);
+                paint.set_alpha_f(mask.opacity);
+                mask_canvas.draw_path(&path, &paint);
+            }
+        }
+    }
+
+    // Use the mask as a clip via shader
+    let mask_image = mask_surface.image_snapshot();
+    let mask_shader = mask_image.to_shader(
+        None, // local matrix
+        skia_safe::SamplingOptions::default(),
+        None, // tile rect
+    );
+
+    if let Some(shader) = mask_shader {
+        // Save current state
+        canvas.save();
+
+        // Create a paint with the mask shader
+        let mut paint = Paint::default();
+        paint.set_shader(shader);
+        paint.set_blend_mode(skia_safe::BlendMode::Modulate);
+
+        // Apply the mask by drawing it over the entire canvas
+        canvas.draw_rect(
+            skia_safe::Rect::new(0.0, 0.0, canvas_width as f32, canvas_height as f32),
+            &paint,
+        );
+
+        // Restore state
+        canvas.restore();
     }
 }
 
@@ -749,6 +866,29 @@ fn convert_color_channel(c: CoreColorChannel) -> ColorChannel {
 
 // ... existing build_filter ...
 
+fn runtime_shader_filter<F>(
+    sksl: &str,
+    input: Option<skia_safe::ImageFilter>,
+    configure: F,
+) -> Option<skia_safe::ImageFilter>
+where
+    F: FnOnce(&mut RuntimeShaderBuilder),
+{
+    let fallback = input.clone();
+    let source = input.or_else(|| image_filters::offset((0.0, 0.0), None, None));
+    match RuntimeEffect::make_for_shader(sksl, None) {
+        Ok(effect) => {
+            let mut builder = RuntimeShaderBuilder::new(effect);
+            configure(&mut builder);
+            image_filters::runtime_shader(&builder, "image", source).or(fallback)
+        }
+        Err(err) => {
+            eprintln!("[lottie-skia] Runtime shader compile error: {err}");
+            fallback
+        }
+    }
+}
+
 fn build_filter(effects: &[Effect]) -> Option<skia_safe::ImageFilter> {
     let mut filter: Option<skia_safe::ImageFilter> = None;
     for effect in effects {
@@ -891,7 +1031,376 @@ fn build_filter(effects: &[Effect]) -> Option<skia_safe::ImageFilter> {
                     filter
                 }
             }
-            Effect::Stroke { .. } | Effect::Levels { .. } => filter,
+            Effect::Stroke { .. } => filter,
+            Effect::Levels {
+                in_black,
+                in_white,
+                gamma,
+                out_black,
+                out_white,
+            } => {
+                let sksl = r#"
+                    uniform float uInBlack;
+                    uniform float uInWhite;
+                    uniform float uGamma;
+                    uniform float uOutBlack;
+                    uniform float uOutWhite;
+
+                    half4 main(half4 color) {
+                        vec3 input_range = max(vec3(0.0), min(vec3(1.0), (color.rgb - vec3(uInBlack)) / max(0.0001, uInWhite - uInBlack)));
+                        vec3 gamma_corrected = pow(input_range, vec3(1.0 / uGamma));
+                        vec3 output_range = vec3(uOutBlack) + gamma_corrected * (uOutWhite - uOutBlack);
+                        return half4(output_range, color.a);
+                    }
+                "#;
+                if let Ok(effect) = RuntimeEffect::make_for_color_filter(sksl, None) {
+                    let mut data = Vec::with_capacity(20);
+                    for v in [*in_black, *in_white, *gamma, *out_black, *out_white] {
+                        data.extend_from_slice(&v.to_ne_bytes());
+                    }
+                    let uniforms = Data::new_copy(&data);
+                    if let Some(cf) = effect.make_color_filter(uniforms, None) {
+                        image_filters::color_filter(cf, filter, None)
+                    } else {
+                        filter
+                    }
+                } else {
+                    filter
+                }
+            }
+            Effect::RadialWipe {
+                completion,
+                start_angle,
+                center,
+                wipe,
+                feather,
+            } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform float u_completion;
+                    uniform float u_start_angle;
+                    uniform float2 u_center;
+                    uniform float u_wipe;
+                    uniform float u_feather;
+
+                    half4 main(float2 pos) {
+                        half4 c = image.eval(pos);
+                        float2 d = pos - u_center;
+                        float angle = atan(-d.y, d.x);
+                        if (angle < 0.0) {
+                            angle += 6.28318530718;
+                        }
+                        float start = radians(u_start_angle);
+                        start = mod(start, 6.28318530718);
+                        if (start < 0.0) {
+                            start += 6.28318530718;
+                        }
+
+                        float rel = mod(angle - start + 6.28318530718, 6.28318530718) / 6.28318530718;
+                        if (u_wipe >= 0.5) {
+                            rel = 1.0 - rel;
+                        }
+
+                        float edge = clamp(u_completion, 0.0, 1.0);
+                        float f = max(0.0001, u_feather);
+                        float mask = 1.0 - smoothstep(edge - f, edge + f, rel);
+                        mask = clamp(mask, 0.0, 1.0);
+                        c.a *= half(mask);
+                        return c;
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_float("u_completion", &[*completion]);
+                    let _ = builder.set_uniform_float("u_start_angle", &[*start_angle]);
+                    let _ = builder.set_uniform_float("u_center", &[center.x, center.y]);
+                    let _ = builder.set_uniform_float("u_wipe", &[*wipe]);
+                    let _ = builder.set_uniform_float("u_feather", &[(*feather).max(0.0001)]);
+                })
+            }
+            Effect::Matte3 {
+                channel,
+                invert,
+                show_mask,
+                premultiply,
+            } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform int u_channel;
+                    uniform int u_invert;
+                    uniform int u_show_mask;
+                    uniform int u_premultiply;
+
+                    float hue(float3 c) {
+                        float maxc = max(c.r, max(c.g, c.b));
+                        float minc = min(c.r, min(c.g, c.b));
+                        float delta = maxc - minc;
+                        if (delta <= 0.00001) return 0.0;
+                        float h;
+                        if (maxc == c.r) h = (c.g - c.b) / delta;
+                        else if (maxc == c.g) h = 2.0 + (c.b - c.r) / delta;
+                        else h = 4.0 + (c.r - c.g) / delta;
+                        h /= 6.0;
+                        if (h < 0.0) h += 1.0;
+                        return h;
+                    }
+
+                    float saturation(float3 c) {
+                        float maxc = max(c.r, max(c.g, c.b));
+                        float minc = min(c.r, min(c.g, c.b));
+                        if (maxc <= 0.00001) return 0.0;
+                        return (maxc - minc) / maxc;
+                    }
+
+                    half4 main(float2 pos) {
+                        half4 c = image.eval(pos);
+                        float mask = c.a;
+
+                        if (u_channel == 1) mask = c.r;
+                        else if (u_channel == 2) mask = c.g;
+                        else if (u_channel == 3) mask = c.b;
+                        else if (u_channel == 4) mask = c.a;
+                        else if (u_channel == 5) mask = dot(c.rgb, float3(0.2126, 0.7152, 0.0722));
+                        else if (u_channel == 6) mask = hue(c.rgb);
+                        else if (u_channel == 7) {
+                            float maxc = max(c.r, max(c.g, c.b));
+                            float minc = min(c.r, min(c.g, c.b));
+                            mask = (maxc + minc) * 0.5;
+                        } else if (u_channel == 8) {
+                            mask = saturation(c.rgb);
+                        } else if (u_channel == 9) {
+                            mask = 1.0;
+                        } else if (u_channel == 10) {
+                            return c; // Off
+                        }
+
+                        if (u_invert != 0) {
+                            mask = 1.0 - mask;
+                        }
+                        mask = clamp(mask, 0.0, 1.0);
+
+                        if (u_show_mask != 0) {
+                            return half4(mask, mask, mask, 1.0);
+                        }
+
+                        c.a *= half(mask);
+                        if (u_premultiply != 0) {
+                            c.rgb *= half3(mask);
+                        }
+                        return c;
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_int("u_channel", &[*channel]);
+                    let _ = builder.set_uniform_int("u_invert", &[if *invert { 1 } else { 0 }]);
+                    let _ =
+                        builder.set_uniform_int("u_show_mask", &[if *show_mask { 1 } else { 0 }]);
+                    let _ = builder
+                        .set_uniform_int("u_premultiply", &[if *premultiply { 1 } else { 0 }]);
+                })
+            }
+            Effect::Twirl {
+                angle,
+                radius,
+                center,
+            } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform float u_angle;
+                    uniform float u_radius;
+                    uniform float2 u_center;
+
+                    half4 main(float2 pos) {
+                        float2 p = pos - u_center;
+                        float d = length(p);
+                        if (d >= u_radius || u_radius <= 0.0001) {
+                            return image.eval(pos);
+                        }
+
+                        float t = (u_radius - d) / u_radius;
+                        float theta = radians(u_angle) * t * t;
+                        float s = sin(theta);
+                        float c = cos(theta);
+                        float2 q = float2(c * p.x - s * p.y, s * p.x + c * p.y);
+                        return image.eval(u_center + q);
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_float("u_angle", &[*angle]);
+                    let _ = builder.set_uniform_float("u_radius", &[(*radius).max(0.0001)]);
+                    let _ = builder.set_uniform_float("u_center", &[center.x, center.y]);
+                })
+            }
+            Effect::MeshWarp {
+                rows,
+                columns,
+                quality,
+            } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform float u_rows;
+                    uniform float u_cols;
+                    uniform float u_quality;
+
+                    half4 main(float2 pos) {
+                        float rows = max(1.0, u_rows);
+                        float cols = max(1.0, u_cols);
+                        float q = clamp(u_quality, 0.0, 100.0) / 100.0;
+                        float amp = q * 6.0;
+                        float ox = sin(pos.y / (18.0 + rows * 8.0) * 6.28318530718) * amp;
+                        float oy = cos(pos.x / (18.0 + cols * 8.0) * 6.28318530718) * amp;
+                        return image.eval(pos + float2(ox, oy));
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_float("u_rows", &[*rows]);
+                    let _ = builder.set_uniform_float("u_cols", &[*columns]);
+                    let _ = builder.set_uniform_float("u_quality", &[*quality]);
+                })
+            }
+            Effect::Wavy {
+                radius,
+                center,
+                conversion_type,
+                speed,
+                width,
+                height,
+                phase,
+            } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform float u_radius;
+                    uniform float2 u_center;
+                    uniform int u_conversion_type;
+                    uniform int u_speed;
+                    uniform float u_width;
+                    uniform float u_height;
+                    uniform float u_phase;
+
+                    half4 main(float2 pos) {
+                        float2 d = pos - u_center;
+                        float dist = length(d);
+                        float r = max(0.0001, u_radius);
+                        float falloff = clamp(1.0 - dist / r, 0.0, 1.0);
+                        if (u_radius <= 0.0) {
+                            falloff = 1.0;
+                        }
+
+                        float w = max(1.0, u_width);
+                        float h = max(1.0, u_height);
+                        float s = max(1.0, float(u_speed));
+                        float ph = radians(u_phase);
+                        float ox = sin((pos.y / h) * 6.28318530718 + ph) * s * falloff;
+                        float oy = cos((pos.x / w) * 6.28318530718 + ph) * s * falloff;
+
+                        if (u_conversion_type == 2) {
+                            float2 n = dist > 0.0001 ? d / dist : float2(1.0, 0.0);
+                            ox = n.x * ox;
+                            oy = n.y * oy;
+                        }
+
+                        return image.eval(pos + float2(ox, oy));
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_float("u_radius", &[*radius]);
+                    let _ = builder.set_uniform_float("u_center", &[center.x, center.y]);
+                    let _ = builder.set_uniform_int("u_conversion_type", &[*conversion_type]);
+                    let _ = builder.set_uniform_int("u_speed", &[*speed]);
+                    let _ = builder.set_uniform_float("u_width", &[(*width).max(1.0)]);
+                    let _ = builder.set_uniform_float("u_height", &[(*height).max(1.0)]);
+                    let _ = builder.set_uniform_float("u_phase", &[*phase]);
+                })
+            }
+            Effect::Spherize { radius, center } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform float u_radius;
+                    uniform float2 u_center;
+
+                    half4 main(float2 pos) {
+                        float2 p = pos - u_center;
+                        float d = length(p);
+                        if (u_radius <= 0.0001 || d >= u_radius) {
+                            return image.eval(pos);
+                        }
+
+                        float t = clamp(d / u_radius, 0.0, 1.0);
+                        float nd = sin(t * 1.57079632679) * u_radius;
+                        float scale = d > 0.0001 ? nd / d : 1.0;
+                        float2 warped = u_center + p * scale;
+                        return image.eval(warped);
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_float("u_radius", &[(*radius).max(0.0001)]);
+                    let _ = builder.set_uniform_float("u_center", &[center.x, center.y]);
+                })
+            }
+            Effect::Puppet {
+                engine,
+                refinement,
+                on_transparent,
+            } => {
+                let sksl = r#"
+                    uniform shader image;
+                    uniform int u_engine;
+                    uniform float u_refinement;
+                    uniform int u_on_transparent;
+
+                    half4 main(float2 pos) {
+                        float freq = max(1.0, float(u_engine));
+                        float amp = clamp(u_refinement, 0.0, 100.0) / 100.0 * 3.0;
+                        float2 offset = float2(
+                            sin(pos.y / (36.0 / freq)) * amp,
+                            cos(pos.x / (36.0 / freq)) * amp
+                        );
+                        half4 warped = image.eval(pos + offset);
+                        if (u_on_transparent == 0 && warped.a <= 0.001) {
+                            return image.eval(pos);
+                        }
+                        return warped;
+                    }
+                "#;
+                runtime_shader_filter(sksl, filter, |builder| {
+                    let _ = builder.set_uniform_int("u_engine", &[*engine]);
+                    let _ = builder.set_uniform_float("u_refinement", &[*refinement]);
+                    let _ = builder.set_uniform_int("u_on_transparent", &[*on_transparent]);
+                })
+            }
+            Effect::CustomGroup { controls, .. } => {
+                let named_amount = controls.iter().find_map(|control| {
+                    let name = control.name.as_deref()?.to_ascii_lowercase();
+                    if name.contains("intensity")
+                        || name.contains("amount")
+                        || name.contains("mix")
+                        || name.contains("opacity")
+                    {
+                        control.values.first().copied()
+                    } else {
+                        None
+                    }
+                });
+                let fallback_amount = controls
+                    .iter()
+                    .find_map(|control| control.values.first().copied());
+                let amount = named_amount.or(fallback_amount).unwrap_or(12.0);
+                let mix = sanitize(amount / 100.0).clamp(0.0, 1.0);
+                if mix <= 0.0 {
+                    filter
+                } else {
+                    let lift = mix * 0.08;
+                    let matrix = [
+                        1.0, 0.0, 0.0, 0.0, lift, 0.0, 1.0, 0.0, 0.0, lift, 0.0, 0.0, 1.0, 0.0,
+                        lift, 0.0, 0.0, 0.0, 1.0, 0.0,
+                    ];
+                    image_filters::color_filter(
+                        color_filters::matrix_row_major(&matrix, Clamp::Yes),
+                        filter,
+                        None,
+                    )
+                }
+            }
+            Effect::Unsupported { .. } => filter,
         };
         filter = next_filter;
     }

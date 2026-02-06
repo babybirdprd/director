@@ -22,11 +22,14 @@ fn create_stroke_layer(stroke: data::Shape) -> data::Layer {
         ip: 0.0,
         op: 60.0,
         st: 0.0,
+        sr: 1.0,
         ks: data::Transform::default(),
         ao: None,
         tm: None,
         ddd: None,
+        au: None,
         pe: None,
+        hd: None,
         masks_properties: None,
         tt: None,
         ef: None,
@@ -39,6 +42,17 @@ fn create_stroke_layer(stroke: data::Shape) -> data::Layer {
         sh: None,
         shapes: Some(vec![rect, stroke]),
         t: None,
+        bm: None,
+        match_name: None,
+        tp: None,
+        td: None,
+        has_mask: None,
+        mb: None,
+        css_class: None,
+        layer_id: None,
+        xml_tag: None,
+        collapse_transform_deprecated: None,
+        collapse_transform: None,
     }
 }
 
@@ -46,13 +60,18 @@ fn create_stroke_layer(stroke: data::Shape) -> data::Layer {
 fn extract_stroke_dash(layer: data::Layer) -> Option<lottie_core::DashPattern> {
     let model = data::LottieJson {
         v: None,
+        nm: None,
         ip: 0.0,
         op: 60.0,
         fr: 60.0,
         w: 100,
         h: 100,
+        ddd: None,
+        bg: None,
         layers: vec![layer],
         assets: vec![],
+        markers: vec![],
+        metadata: None,
     };
 
     let mut player = LottiePlayer::new();

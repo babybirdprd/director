@@ -4,14 +4,24 @@ use std::fmt;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LottieJson {
     pub v: Option<String>,
+    #[serde(default)]
+    pub nm: Option<String>,
     pub ip: f32,
     pub op: f32,
     pub fr: f32,
     pub w: u32,
     pub h: u32,
+    #[serde(default)]
+    pub ddd: Option<u8>,
+    #[serde(default)]
+    pub bg: Option<String>,
     pub layers: Vec<Layer>,
     #[serde(default)]
     pub assets: Vec<Asset>,
+    #[serde(default)]
+    pub markers: Vec<Marker>,
+    #[serde(default)]
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -29,8 +39,10 @@ pub struct Layer {
     pub ip: f32,
     #[serde(default)]
     pub op: f32,
+    #[serde(default)]
+    pub st: f32, // Start time - defaults to 0 per Lottie spec
     #[serde(default = "default_one")]
-    pub st: f32,
+    pub sr: f32, // Time stretch (1.0 = normal, >1 = slower, <1 = faster)
     #[serde(default)]
     pub ks: Transform,
     #[serde(default)]
@@ -40,16 +52,45 @@ pub struct Layer {
     #[serde(default)]
     pub ddd: Option<u8>, // 3D Layer Flag (0=2D, 1=3D)
     #[serde(default)]
+    pub au: Option<serde_json::Value>, // Audio settings for audio layers
+    #[serde(default)]
     pub pe: Option<Property<f32>>, // Perspective
+    #[serde(default)]
+    pub hd: Option<bool>, // Hidden - if true, layer should not be rendered
 
+    // From visual-object
+    #[serde(default, rename = "mn")]
+    pub match_name: Option<String>, // Match name, used in expressions
+
+    // From visual-layer
     #[serde(default, rename = "masksProperties")]
     pub masks_properties: Option<Vec<MaskProperties>>,
     #[serde(default)]
-    pub tt: Option<u8>,
+    pub tt: Option<u8>, // Matte mode (0=Normal, 1=Alpha, 2=Inverted Alpha, 3=Luma, 4=Inverted Luma)
+    #[serde(default)]
+    pub tp: Option<u32>, // Matte parent - Index of the layer used as matte
+    #[serde(default)]
+    pub td: Option<u8>, // Matte target - If 1, a layer is using this layer as a track matte
+    #[serde(default, rename = "hasMask")]
+    pub has_mask: Option<bool>, // Whether the layer has masks applied
     #[serde(default)]
     pub ef: Option<Vec<Effect>>,
     #[serde(default)]
     pub sy: Option<Vec<LayerStyle>>,
+    #[serde(default)]
+    pub bm: Option<u8>, // Blend mode: 0=Normal, 1=Multiply, 2=Screen, etc.
+    #[serde(default)]
+    pub mb: Option<bool>, // Motion blur enabled
+    #[serde(default, rename = "cl")]
+    pub css_class: Option<String>, // CSS class used by SVG renderer
+    #[serde(default, rename = "ln")]
+    pub layer_id: Option<String>, // Layer XML ID used by SVG renderer
+    #[serde(default, rename = "tg")]
+    pub xml_tag: Option<String>, // Layer XML tag name used by SVG renderer
+    #[serde(default, rename = "cp")]
+    pub collapse_transform_deprecated: Option<bool>, // Deprecated in favor of ct
+    #[serde(default, rename = "ct")]
+    pub collapse_transform: Option<u8>, // Collapse transform: 0=off, 1=on (apply transforms before masks)
 
     // Type specific (flattened manually as optional fields)
     #[serde(default, rename = "refId")]
@@ -86,6 +127,8 @@ pub struct MaskProperties {
     pub x: Property<f32>,
     #[serde(default)]
     pub nm: Option<String>,
+    #[serde(default, rename = "f")]
+    pub feather: Property<Vec2>, // Feather x and y radius
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -98,6 +141,10 @@ pub struct Effect {
     pub ix: Option<u32>,
     #[serde(default)]
     pub en: Option<u8>,
+    #[serde(default, rename = "mn")]
+    pub match_name: Option<String>,
+    #[serde(default)]
+    pub np: Option<u32>,
     #[serde(default)]
     pub ef: Option<Vec<EffectValue>>,
 }
@@ -110,6 +157,10 @@ pub struct EffectValue {
     pub nm: Option<String>,
     #[serde(default)]
     pub ix: Option<u32>,
+    #[serde(default, rename = "mn")]
+    pub match_name: Option<String>,
+    #[serde(default)]
+    pub np: Option<u32>,
     #[serde(default, deserialize_with = "deserialize_effect_value_property")]
     pub v: Option<Property<serde_json::Value>>,
 }
@@ -453,6 +504,10 @@ pub struct Transform {
     #[serde(default)]
     pub or: Option<Property<Vec3DefaultZero>>, // Orientation
     #[serde(default)]
+    pub sk: Property<f32>, // Skew amount in degrees
+    #[serde(default)]
+    pub sa: Property<f32>, // Skew axis in degrees (0 = X axis, 90 = Y axis)
+    #[serde(default)]
     pub o: Property<f32>, // Opacity
 }
 
@@ -680,6 +735,8 @@ pub struct Asset {
     pub id: String,
     #[serde(default)]
     pub nm: Option<String>,
+    #[serde(default, rename = "mn")]
+    pub match_name: Option<String>,
     #[serde(default)]
     pub layers: Option<Vec<Layer>>,
     #[serde(default)]
@@ -692,6 +749,24 @@ pub struct Asset {
     pub p: Option<String>,
     #[serde(default)]
     pub e: Option<u8>,
+    #[serde(default)]
+    pub t: Option<serde_json::Value>, // "seq" for image sequence, or numeric for data assets
+    #[serde(default)]
+    pub sid: Option<String>, // Slot ID (slottable assets)
+    #[serde(default)]
+    pub fr: Option<f32>, // Asset-local framerate (precomposition)
+    #[serde(default)]
+    pub xt: Option<u8>, // Extra flag used by some precompositions
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct Marker {
+    #[serde(default)]
+    pub cm: Option<String>,
+    #[serde(default)]
+    pub tm: Option<f32>,
+    #[serde(default)]
+    pub dr: Option<f32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -699,6 +774,24 @@ pub struct TextData {
     pub d: Property<TextDocument>,
     #[serde(default)]
     pub a: Option<Vec<TextAnimatorData>>,
+    #[serde(default, rename = "p")]
+    pub path: Option<TextPathData>, // Text on path options
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct TextPathData {
+    #[serde(default, rename = "m")]
+    pub mask_index: Option<u32>, // Index of mask to use as baseline (0-based)
+    #[serde(default, rename = "f")]
+    pub first_margin: Option<Property<f32>>, // Offset from start of path
+    #[serde(default, rename = "l")]
+    pub last_margin: Option<Property<f32>>, // Offset from end of path
+    #[serde(default, rename = "a")]
+    pub force_alignment: Option<bool>, // Force text to fit path length
+    #[serde(default, rename = "p")]
+    pub perpendicular: Option<bool>, // Text perpendicular to path
+    #[serde(default, rename = "r")]
+    pub reversed: Option<bool>, // Reverse path direction
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]

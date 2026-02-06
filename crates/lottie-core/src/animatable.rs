@@ -1,9 +1,78 @@
 #[cfg(feature = "expressions")]
-use crate::expressions::ExpressionEvaluator;
+use crate::expressions::{
+    CompObject, EffectObject, ExpressionEvaluator, LayerObject, PropertyValue,
+};
 #[cfg(feature = "expressions")]
 use boa_engine::{js_string, JsValue};
 use glam::{Vec2, Vec3, Vec4};
 use lottie_data::model::{BezierPath, Property, TextDocument, Value};
+
+/// Context for expression evaluation including layer and composition data
+/// This enables expressions to access:
+/// - Layer properties like `thisLayer.transform.position`
+/// - Composition layers like `thisComp.layer(1)` or `thisComp.layer("name")`
+/// - Expression controls like `effect("Slider Control")("Slider")`
+#[cfg(feature = "expressions")]
+pub struct ExpressionContext {
+    pub layer: Option<LayerObject>,
+    pub comp: Option<CompObject>,
+    pub effects: Vec<EffectObject>,
+}
+
+#[cfg(not(feature = "expressions"))]
+pub struct ExpressionContext;
+
+impl ExpressionContext {
+    /// Create a new expression context with layer data
+    #[cfg(feature = "expressions")]
+    pub fn with_layer(layer: LayerObject) -> Self {
+        Self {
+            layer: Some(layer),
+            comp: None,
+            effects: Vec::new(),
+        }
+    }
+
+    /// Create a new expression context with layer, composition, and effects data
+    #[cfg(feature = "expressions")]
+    pub fn with_layer_comp_and_effects(
+        layer: LayerObject,
+        comp: CompObject,
+        effects: Vec<EffectObject>,
+    ) -> Self {
+        Self {
+            layer: Some(layer),
+            comp: Some(comp),
+            effects,
+        }
+    }
+
+    /// Create a new expression context with layer and composition data
+    #[cfg(feature = "expressions")]
+    pub fn with_layer_and_comp(layer: LayerObject, comp: CompObject) -> Self {
+        Self {
+            layer: Some(layer),
+            comp: Some(comp),
+            effects: Vec::new(),
+        }
+    }
+
+    /// Create a default expression context without layer or composition data
+    pub fn default() -> Self {
+        #[cfg(feature = "expressions")]
+        {
+            Self {
+                layer: None,
+                comp: None,
+                effects: Vec::new(),
+            }
+        }
+        #[cfg(not(feature = "expressions"))]
+        {
+            Self
+        }
+    }
+}
 
 pub trait Interpolatable: Sized + Clone {
     fn lerp(&self, other: &Self, t: f32) -> Self;
@@ -403,7 +472,117 @@ pub fn solve_cubic_bezier(p1: Vec2, p2: Vec2, x: f32) -> f32 {
 
 pub struct Animator;
 
+/// Trait for converting types to/from PropertyValue for expression evaluation
+#[cfg(feature = "expressions")]
+pub trait ToPropertyValue {
+    fn to_property_value(&self) -> PropertyValue;
+    fn from_property_value(value: &PropertyValue) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+#[cfg(not(feature = "expressions"))]
+pub trait ToPropertyValue {}
+
+#[cfg(not(feature = "expressions"))]
+impl<T> ToPropertyValue for T {}
+
+#[cfg(feature = "expressions")]
+impl ToPropertyValue for f32 {
+    fn to_property_value(&self) -> PropertyValue {
+        PropertyValue::Scalar(*self as f64)
+    }
+    fn from_property_value(value: &PropertyValue) -> Option<Self> {
+        Some(value.as_scalar() as f32)
+    }
+}
+
+#[cfg(feature = "expressions")]
+impl ToPropertyValue for Vec2 {
+    fn to_property_value(&self) -> PropertyValue {
+        PropertyValue::Vector(vec![self.x as f64, self.y as f64])
+    }
+    fn from_property_value(value: &PropertyValue) -> Option<Self> {
+        let vec = value.as_vector();
+        if vec.len() >= 2 {
+            Some(Vec2::new(vec[0] as f32, vec[1] as f32))
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(feature = "expressions")]
+impl ToPropertyValue for Vec3 {
+    fn to_property_value(&self) -> PropertyValue {
+        PropertyValue::Vector(vec![self.x as f64, self.y as f64, self.z as f64])
+    }
+    fn from_property_value(value: &PropertyValue) -> Option<Self> {
+        let vec = value.as_vector();
+        if vec.len() >= 3 {
+            Some(Vec3::new(vec[0] as f32, vec[1] as f32, vec[2] as f32))
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(feature = "expressions")]
+impl ToPropertyValue for Vec4 {
+    fn to_property_value(&self) -> PropertyValue {
+        PropertyValue::Vector(vec![
+            self.x as f64,
+            self.y as f64,
+            self.z as f64,
+            self.w as f64,
+        ])
+    }
+    fn from_property_value(value: &PropertyValue) -> Option<Self> {
+        let vec = value.as_vector();
+        if vec.len() >= 4 {
+            Some(Vec4::new(
+                vec[0] as f32,
+                vec[1] as f32,
+                vec[2] as f32,
+                vec[3] as f32,
+            ))
+        } else {
+            None
+        }
+    }
+}
+
+/// Simple animated property wrapper for expression evaluation
+/// Provides basic value_at_time and velocity_at_time support
+#[cfg(feature = "expressions")]
+struct SimpleAnimatedProperty {
+    current_value: PropertyValue,
+}
+
+#[cfg(feature = "expressions")]
+impl crate::expressions::AnimatedProperty for SimpleAnimatedProperty {
+    fn value_at_time(&self, _time: f64) -> PropertyValue {
+        self.current_value.clone()
+    }
+
+    fn velocity_at_time(&self, _time: f64) -> PropertyValue {
+        // Return zero velocity as we don't have keyframe data here
+        match &self.current_value {
+            PropertyValue::Scalar(_) => PropertyValue::Scalar(0.0),
+            PropertyValue::Vector(v) => PropertyValue::Vector(vec![0.0; v.len()]),
+        }
+    }
+
+    fn speed_at_time(&self, _time: f64) -> f64 {
+        0.0
+    }
+}
+
 impl Animator {
+    /// Resolve a property value, optionally with expression support
+    ///
+    /// When `ctx` contains a LayerObject with transform data, expressions can access
+    /// layer properties like `thisLayer.transform.position`.
     pub fn resolve<T, U>(
         prop: &Property<T>,
         frame: f32,
@@ -412,9 +591,11 @@ impl Animator {
         #[cfg(feature = "expressions")] evaluator: Option<&mut ExpressionEvaluator>,
         #[cfg(not(feature = "expressions"))] _evaluator: Option<&mut ()>, // Dummy type
         _frame_rate: f32,
+        #[cfg(feature = "expressions")] ctx: &ExpressionContext,
+        #[cfg(not(feature = "expressions"))] _ctx: &ExpressionContext,
     ) -> U
     where
-        U: Interpolatable + 'static + ToJsValue,
+        U: Interpolatable + 'static + ToJsValue + ToPropertyValue,
     {
         // 1. Calculate Base Value (Keyframes)
         let base_value = Self::resolve_keyframes(prop, frame, &converter, default.clone());
@@ -447,21 +628,115 @@ impl Animator {
                     base_value.clone()
                 };
 
+                // Use the new evaluate_on_property if we have layer context
+                // Otherwise fall back to legacy evaluate
+                let layer_obj = ctx.layer.clone().unwrap_or_else(|| LayerObject::new(0, ""));
+
+                // Convert values to PropertyValue for the new API
+                let base_prop_value = base_value.to_property_value();
+                let loop_prop_value = loop_value.to_property_value();
+
+                // Create a simple animated property wrapper for value_at_time support
+                let prop_wrapper = SimpleAnimatedProperty {
+                    current_value: base_prop_value.clone(),
+                };
+
+                match eval.evaluate_on_property(
+                    expr,
+                    &prop_wrapper,
+                    &base_prop_value,
+                    time as f64,
+                    &layer_obj,
+                    ctx.comp.as_ref(),
+                    Some(&ctx.effects),
+                    Some(&loop_prop_value),
+                    None,
+                    &crate::expressions::DirectorVariableContext::default(),
+                ) {
+                    Ok(result) => {
+                        if let Some(val) = U::from_property_value(&result) {
+                            return val;
+                        }
+                    }
+                    Err(_e) => {
+                        // Fall back to legacy evaluate on failure
+                        let (js_val, js_loop_val) = {
+                            let ctx = eval.context();
+                            (base_value.to_js_value(ctx), loop_value.to_js_value(ctx))
+                        };
+
+                        match eval.evaluate(expr, &js_val, &js_loop_val, time, _frame_rate) {
+                            Ok(res) => {
+                                let context = eval.context();
+                                if let Some(val) = U::from_js_value(&res, context) {
+                                    return val;
+                                }
+                            }
+                            Err(_) => {}
+                        }
+                    }
+                }
+            }
+        }
+
+        base_value
+    }
+
+    /// Legacy resolve without expression context (for backward compatibility)
+    pub fn resolve_simple<T, U>(
+        prop: &Property<T>,
+        frame: f32,
+        converter: impl Fn(&T) -> U,
+        default: U,
+        #[cfg(feature = "expressions")] evaluator: Option<&mut ExpressionEvaluator>,
+        #[cfg(not(feature = "expressions"))] _evaluator: Option<&mut ()>,
+        _frame_rate: f32,
+    ) -> U
+    where
+        U: Interpolatable + 'static + ToJsValue,
+    {
+        // Simple resolve without expression context
+        let base_value = Self::resolve_keyframes(prop, frame, &converter, default.clone());
+
+        #[cfg(feature = "expressions")]
+        if let Some(expr) = &prop.x {
+            if let Some(eval) = evaluator {
+                let time = frame / _frame_rate;
+
+                let loop_value = if let Value::Animated(keyframes) = &prop.k {
+                    if !keyframes.is_empty() {
+                        let first_t = keyframes[0].t;
+                        let last_t = keyframes[keyframes.len() - 1].t;
+                        let duration = last_t - first_t;
+
+                        if duration > 0.0 && frame > last_t {
+                            let t_since_end = frame - last_t;
+                            let cycle_offset = t_since_end % duration;
+                            let cycle_frame = first_t + cycle_offset;
+                            Self::resolve_keyframes(prop, cycle_frame, &converter, default.clone())
+                        } else {
+                            base_value.clone()
+                        }
+                    } else {
+                        base_value.clone()
+                    }
+                } else {
+                    base_value.clone()
+                };
+
                 let (js_val, js_loop_val) = {
                     let ctx = eval.context();
                     (base_value.to_js_value(ctx), loop_value.to_js_value(ctx))
                 };
 
-                match eval.evaluate(expr, &js_val, &js_loop_val, time, frame_rate) {
+                match eval.evaluate(expr, &js_val, &js_loop_val, time, _frame_rate) {
                     Ok(res) => {
                         let context = eval.context();
                         if let Some(val) = U::from_js_value(&res, context) {
                             return val;
                         }
                     }
-                    Err(_e) => {
-                        // eprintln!("Expression failed: {}", _e);
-                    }
+                    Err(_) => {}
                 }
             }
         }
@@ -621,24 +896,45 @@ mod tests {
         let conv = |v: &f32| *v;
 
         // 1. Exact match start
-        assert_eq!(Animator::resolve(&prop, 0.0, conv, -1.0, None, 60.0), 0.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, 0.0, conv, -1.0, None, 60.0),
+            0.0
+        );
 
         // 2. Exact match middle
-        assert_eq!(Animator::resolve(&prop, 10.0, conv, -1.0, None, 60.0), 10.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, 10.0, conv, -1.0, None, 60.0),
+            10.0
+        );
 
         // 3. Exact match end
-        assert_eq!(Animator::resolve(&prop, 20.0, conv, -1.0, None, 60.0), 30.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, 20.0, conv, -1.0, None, 60.0),
+            30.0
+        );
 
         // 4. Before first
-        assert_eq!(Animator::resolve(&prop, -5.0, conv, -1.0, None, 60.0), 0.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, -5.0, conv, -1.0, None, 60.0),
+            0.0
+        );
 
         // 5. After last
-        assert_eq!(Animator::resolve(&prop, 25.0, conv, -1.0, None, 60.0), 30.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, 25.0, conv, -1.0, None, 60.0),
+            30.0
+        );
 
         // 6. Mid-segment
-        assert_eq!(Animator::resolve(&prop, 5.0, conv, -1.0, None, 60.0), 5.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, 5.0, conv, -1.0, None, 60.0),
+            5.0
+        );
 
         // 7. Mid-segment 2
-        assert_eq!(Animator::resolve(&prop, 15.0, conv, -1.0, None, 60.0), 15.0);
+        assert_eq!(
+            Animator::resolve_simple(&prop, 15.0, conv, -1.0, None, 60.0),
+            15.0
+        );
     }
 }

@@ -148,3 +148,61 @@ The remaining 10% difference is due to fundamental differences between Skia and 
 ## Critical Bug Note
 
 The **Keyframe Interpolation Fix** (item 5) was a fundamental bug affecting **ALL Lottie animations**. Any animation with keyframes was interpolating to the wrong values, resulting in frozen or incorrect animations. This fix restores proper animation behavior across the entire system.
+
+### 9. ✅ Skew and Skew Axis Transform Support
+**Files:**
+- `crates/lottie-data/src/model.rs:443-461` - Added `sk` and `sa` fields to Transform struct
+- `crates/lottie-core/src/lib.rs:1695-1807` - Implemented skew calculation for layer transforms
+- `crates/lottie-core/src/lib.rs:1874-1920` - Implemented skew calculation for shape transforms
+
+**Problem:** Lottie spec requires skew transform support (`sk` = skew amount in degrees, `sa` = skew axis in degrees), but these properties were completely missing from the implementation. This caused any Lottie using skew to render incorrectly.
+
+**Fix:** Implemented proper skew transformation per Lottie spec:
+- Added `sk` (skew) and `sa` (skew axis) properties to Transform struct
+- Applied transform order: Translate(-anchor) → Scale → Skew → Rotate → Translate(position)
+- Skew calculation: Rotate(sa) × SkewX(tan(-sk)) × Rotate(-sa)
+- Implemented for both layer transforms (Mat4) and shape transforms (Mat3)
+
+**Spec Reference:** https://lottie.github.io/lottie-spec/1.0.1/specs/helpers/#transform
+
+**Impact:** Fixes positioning/layout issues for Lotties using skew transformations.
+
+### 10. ✅ Auto-Orient Support
+**Files:**
+- `crates/lottie-core/src/lib.rs` - Implemented auto-orient rotation calculation
+
+**Problem:** The `ao` (auto-orient) layer property was parsed but not implemented. Layers with motion paths didn't automatically rotate to follow the path.
+
+**Fix:** Implemented auto-orient rotation calculation:
+- Calculate rotation from position path tangent
+- Sample position at current frame and small delta
+- Add calculated rotation to layer's Z rotation when `ao == 1`
+
+**Impact:** Layers with animated position paths now correctly orient themselves.
+
+### 11. ✅ Rotation Direction Fix (Critical)
+**Files:**
+- `crates/lottie-core/src/lib.rs:1787` - Fixed 3D rotation to use negative angles
+- `crates/lottie-core/src/lib.rs:2032` - Fixed 2D rotation to use negative angles
+
+**Problem:** Lottie spec uses **clockwise** rotation (positive degrees), but glam uses **counter-clockwise** (standard math convention). Our code used positive rotation, causing incorrect coordinate space transforms.
+
+**Fix:** Negated all rotation angles to match Lottie spec:
+- `from_rotation_z(r)` → `from_rotation_z(-r)`
+- `from_rotation_x(rx)` → `from_rotation_x(-rx)`
+- `from_rotation_y(ry)` → `from_rotation_y(-ry)`
+
+**Impact:** Corrects rotation direction for all animated and static rotations.
+
+### 12. ✅ Precomposition Coordinate Space Scaling
+**Files:**
+- `crates/lottie-core/src/lib.rs:821-873` - Added precomp coordinate space mapping
+
+**Problem:** Precomposition layers weren't properly mapping their internal coordinate space to the main composition's coordinate space, causing positioning issues especially when precomp and main comp have different dimensions.
+
+**Fix:** Added coordinate space scaling for precomps:
+- Calculate scale factors: `main_comp_size / precomp_size`
+- Apply scaling transform to all precomp content
+- Handles cases where precomp dimensions differ from main composition
+
+**Impact:** Fixes positioning for precomposition layers, especially in complex animations like heart_eyes.
