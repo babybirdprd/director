@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use lottie_core::animatable::Animator;
+use lottie_core::animatable::{Animator, ExpressionContext};
 use lottie_data::model::{Keyframe, Property, Value};
 
 fn bench_animator_resolve(c: &mut Criterion) {
@@ -29,11 +29,12 @@ fn bench_animator_resolve(c: &mut Criterion) {
     };
 
     let converter = |v: &f32| *v;
+    let ctx = ExpressionContext::default();
 
     // Test early, middle, late frames
     for &frame in &[100.0, 5000.0, 9990.0] {
         group.bench_with_input(BenchmarkId::new("resolve_frame", frame), &frame, |b, &f| {
-            b.iter(|| Animator::resolve(&property, f, converter, 0.0, None, 60.0))
+            b.iter(|| Animator::resolve(&property, f, converter, 0.0, None, 60.0, &ctx))
         });
     }
 

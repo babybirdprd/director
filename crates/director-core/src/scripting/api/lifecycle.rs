@@ -6,6 +6,7 @@
 //! - **Director Creation**: `new_director` with various overloads
 //! - **Scene Management**: `add_scene`, `add_transition`
 //! - **Configuration**: `configure_motion_blur`, `configure_encoder`
+//! - **Validation**: rejects malformed transition ranges/durations
 
 use crate::director::{Director, TimelineItem};
 use crate::node::BoxNode;
@@ -15,6 +16,7 @@ use crate::AssetLoader;
 use rhai::Engine;
 use std::sync::{Arc, Mutex};
 use taffy::prelude::*;
+use tracing::warn;
 
 use super::super::types::{MovieHandle, SceneHandle};
 use super::super::utils::parse_easing;
@@ -278,11 +280,33 @@ fn add_transition_with_kind(
 ) {
     let mut d = movie.director.lock().unwrap();
 
+    if duration <= 0.0 {
+        warn!("Ignoring transition with non-positive duration: {}", duration);
+        return;
+    }
+
     // Find indices
     let from_idx = d.timeline.iter().position(|i| i.scene_root == from.root_id);
     let to_idx = d.timeline.iter().position(|i| i.scene_root == to.root_id);
 
     if let (Some(f_idx), Some(t_idx)) = (from_idx, to_idx) {
+        if t_idx <= f_idx {
+            warn!(
+                from_scene = f_idx,
+                to_scene = t_idx,
+                "Ignoring transition: target scene must come after source scene"
+            );
+            return;
+        }
+        if duration > d.timeline[f_idx].duration {
+            warn!(
+                duration,
+                from_duration = d.timeline[f_idx].duration,
+                "Ignoring transition: duration exceeds source scene duration"
+            );
+            return;
+        }
+
         // Ripple Left Logic
         // We shift 'to' scene and all subsequent scenes (index >= t_idx) left by duration.
 

@@ -13,7 +13,7 @@
 use crate::scene::SceneGraph;
 use crate::types::NodeId;
 use taffy::prelude::*;
-use tracing::instrument;
+use tracing::{instrument, warn};
 
 /// Manages the layout computation using the Taffy engine.
 ///
@@ -54,15 +54,24 @@ impl LayoutEngine {
                     let style = node.element.layout_style();
 
                     // All nodes now have context (Director NodeId) to support measure if needed
-                    let new_t_id = self.taffy.new_leaf_with_context(style, id).unwrap();
-                    self.node_map.insert(id, new_t_id);
-                    new_t_id
+                    match self.taffy.new_leaf_with_context(style, id) {
+                        Ok(new_t_id) => {
+                            self.node_map.insert(id, new_t_id);
+                            new_t_id
+                        }
+                        Err(e) => {
+                            warn!(node_id = id, error = %e, "Failed to create taffy node");
+                            continue;
+                        }
+                    }
                 };
 
                 // Sync Style if dirty
                 if node.dirty_style {
                     let style = node.element.layout_style();
-                    self.taffy.set_style(t_id, style).unwrap();
+                    if let Err(e) = self.taffy.set_style(t_id, style) {
+                        warn!(node_id = id, error = %e, "Failed to sync taffy style");
+                    }
 
                     // Taffy 0.9.2 doesn't support updating measure function per node this way.
                     // Measure logic must be handled in compute_layout_with_measure.
@@ -97,7 +106,9 @@ impl LayoutEngine {
 
                     // Always set children to ensure structure is correct
                     // Taffy's set_children is optimized to do nothing if children list hasn't changed.
-                    self.taffy.set_children(t_id, &children_t_ids).unwrap();
+                    if let Err(e) = self.taffy.set_children(t_id, &children_t_ids) {
+                        warn!(node_id = id, error = %e, "Failed to sync taffy children");
+                    }
                 }
             }
         }
@@ -138,19 +149,19 @@ impl LayoutEngine {
                         Size::ZERO
                     };
 
-                    self.taffy
-                        .compute_layout_with_measure(
-                            root_t_id,
-                            Size {
-                                width: AvailableSpace::Definite(width as f32),
-                                height: AvailableSpace::Definite(height as f32),
-                            },
-                            measure_func,
-                        )
-                        .unwrap();
-
-                    // 4. Write back results to Scene Nodes
-                    self.write_back_recursive(scene, root_id);
+                    if let Err(e) = self.taffy.compute_layout_with_measure(
+                        root_t_id,
+                        Size {
+                            width: AvailableSpace::Definite(width as f32),
+                            height: AvailableSpace::Definite(height as f32),
+                        },
+                        measure_func,
+                    ) {
+                        warn!(root_id, error = %e, "Failed to compute layout");
+                    } else {
+                        // 4. Write back results to Scene Nodes
+                        self.write_back_recursive(scene, root_id);
+                    }
                 }
             }
         }
@@ -158,11 +169,20 @@ impl LayoutEngine {
 
     fn write_back_recursive(&self, scene: &mut SceneGraph, node_id: NodeId) {
         if let Some(t_id) = self.node_map.get(&node_id) {
-            let layout = self.taffy.layout(*t_id).unwrap();
+            let layout = match self.taffy.layout(*t_id) {
+                Ok(layout) => layout,
+                Err(e) => {
+                    warn!(node_id, error = %e, "Failed to read taffy layout");
+                    return;
+                }
+            };
 
             // Scope for mutable borrow
             let (children, mask_node) = {
-                let node = scene.get_node_mut(node_id).unwrap();
+                let Some(node) = scene.get_node_mut(node_id) else {
+                    warn!(node_id, "Missing scene node during layout write-back");
+                    return;
+                };
 
                 node.layout_rect = skia_safe::Rect::from_xywh(
                     layout.location.x,

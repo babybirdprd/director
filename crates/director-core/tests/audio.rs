@@ -3,7 +3,13 @@
 //! Tests for audio resampling and mixing.
 
 use director_core::audio::resample_audio;
+use director_core::director::TimelineItem;
+use director_core::node::BoxNode;
+use director_core::scene::AudioBinding;
+use director_core::video_wrapper::RenderMode;
+use director_core::{DefaultAssetLoader, Director};
 use std::f32::consts::PI;
+use std::sync::Arc;
 
 /// Test audio resampling from 44.1kHz to 48kHz.
 ///
@@ -164,5 +170,94 @@ fn audio_energy_bands_separation() {
         "For 100Hz signal: bass ({}) should be > highs ({})",
         bass_energy,
         highs_energy
+    );
+}
+
+#[test]
+fn audio_binding_uses_track_relative_time_and_duration_window() {
+    let loader = Arc::new(DefaultAssetLoader);
+    let mut director = Director::new(640, 360, 30, loader, RenderMode::Preview, None);
+
+    let root_id = director.scene.add_node(Box::new(BoxNode::new()));
+    director.timeline.push(TimelineItem {
+        scene_root: root_id,
+        name: None,
+        start_time: 0.0,
+        duration: 5.0,
+        z_index: 0,
+        audio_tracks: vec![],
+    });
+
+    let sample_rate = director.audio_mixer.sample_rate as usize;
+    let freq = 100.0_f32; // Bass band
+    let mut samples = Vec::with_capacity(sample_rate * 2);
+    for i in 0..sample_rate {
+        let t = i as f32 / sample_rate as f32;
+        let v = (2.0 * PI * freq * t).sin();
+        samples.push(v);
+        samples.push(v);
+    }
+
+    let track_id = director.add_global_audio(samples);
+    if let Some(track) = director.audio_mixer.get_track_mut(track_id) {
+        track.start_time = 2.0;
+        track.duration = Some(1.0);
+    }
+
+    if let Some(node) = director.scene.get_node_mut(root_id) {
+        node.audio_bindings.push(AudioBinding {
+            track_id,
+            band: "bass".to_string(),
+            property: "x".to_string(),
+            min_value: 0.0,
+            max_value: 200.0,
+            smoothing: 0.0,
+            prev_value: 0.0,
+        });
+    }
+
+    // Before track start: no energy contribution.
+    director.update(1.5);
+    let before_start = director
+        .scene
+        .get_node(root_id)
+        .unwrap()
+        .transform
+        .translate_x
+        .current_value;
+    assert!(
+        before_start.abs() < 1e-5,
+        "Expected no audio reactivity before start, got {}",
+        before_start
+    );
+
+    // During active window: reactive value should move above min.
+    director.update(2.1);
+    let during_active = director
+        .scene
+        .get_node(root_id)
+        .unwrap()
+        .transform
+        .translate_x
+        .current_value;
+    assert!(
+        during_active > 0.001,
+        "Expected positive reactive value during active track window, got {}",
+        during_active
+    );
+
+    // After track duration ends: returns to min.
+    director.update(3.2);
+    let after_end = director
+        .scene
+        .get_node(root_id)
+        .unwrap()
+        .transform
+        .translate_x
+        .current_value;
+    assert!(
+        after_end.abs() < 1e-5,
+        "Expected no reactivity after track end, got {}",
+        after_end
     );
 }

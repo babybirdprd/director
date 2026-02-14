@@ -8,6 +8,7 @@
 //! - **Timeline Management**: Maintains a `Vec<TimelineItem>` of scenes.
 //! - **Update Loop**: Drives animation, audio sync, and scene transitions.
 //! - **Scene Coordination**: Manages active scenes and their time ranges.
+//! - **Audio Reactivity**: Applies track-relative FFT bindings with start/duration windows.
 //!
 //! ## Key Types
 //! - `Director`: The god object that owns timeline, assets, and context.
@@ -92,6 +93,42 @@ pub struct Director {
 unsafe impl Send for Director {}
 
 impl Director {
+    fn audio_binding_energy(
+        analyzer: &AudioAnalyzer,
+        track: &AudioTrack,
+        global_time: f64,
+        band: &str,
+    ) -> f32 {
+        let relative_time = global_time - track.start_time;
+        if relative_time < 0.0 {
+            return 0.0;
+        }
+
+        if let Some(max_duration) = track.duration {
+            if relative_time >= max_duration {
+                return 0.0;
+            }
+        }
+
+        let frame_count = track.samples.len() / 2;
+        if frame_count == 0 {
+            return 0.0;
+        }
+
+        let source_duration = frame_count as f64 / analyzer.sample_rate as f64;
+        if source_duration <= 0.0 {
+            return 0.0;
+        }
+
+        let analysis_time = if track.loop_audio {
+            relative_time % source_duration
+        } else {
+            relative_time
+        };
+
+        analyzer.get_energy(&track.samples, analysis_time, band)
+    }
+
     /// Creates a new Director instance.
     ///
     /// # Arguments
@@ -234,7 +271,9 @@ impl Director {
                 continue;
             }
 
-            let node = self.scene.nodes[id].as_mut().unwrap();
+            let Some(node) = self.scene.nodes[id].as_mut() else {
+                continue;
+            };
 
             node.local_time = time;
             node.last_visit_time = global_time;
@@ -296,6 +335,7 @@ impl Director {
 
         // Pass 3: Audio Reactive Bindings
         // Process after animations so audio values take priority
+        let analyzer = self.audio_analyzer.clone();
         for node_opt in self.scene.nodes.iter_mut() {
             if let Some(node) = node_opt {
                 if (node.last_visit_time - global_time).abs() < 0.0001 {
@@ -304,11 +344,7 @@ impl Director {
                         let energy = if let Some(Some(track)) =
                             self.audio_mixer.tracks.get(binding.track_id)
                         {
-                            self.audio_analyzer.get_energy(
-                                &track.samples,
-                                global_time,
-                                &binding.band,
-                            )
+                            Self::audio_binding_energy(&analyzer, track, global_time, &binding.band)
                         } else {
                             0.0
                         };

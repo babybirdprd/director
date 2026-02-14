@@ -9,6 +9,7 @@
 //! - **Cinematic Shaders**:
 //!   - `apply_effect("directional_blur", #{ strength: 10.0, angle: 45.0, samples: 16 })` for motion blur
 //!   - `apply_effect("grain", #{ intensity: 0.1, size: 2.0 })` for film grain
+//! - **Safety Guards**: stale-handle checks with script-level errors
 
 use crate::animation::{Animated, TweenableVector};
 use crate::node::{EffectType, ShaderUniform};
@@ -23,8 +24,9 @@ pub fn register(engine: &mut Engine) {
     // Named effects (no value)
     engine.register_fn(
         "apply_effect",
-        |node: &mut NodeHandle, name: &str| -> NodeHandle {
-            let mut d = node.director.lock().unwrap();
+        |node: &mut NodeHandle, name: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = node.lock_director()?;
+            node.ensure_alive(&d)?;
             let effect = match name {
                 "grayscale" => Some(EffectType::ColorMatrix(vec![
                     0.2126, 0.7152, 0.0722, 0.0, 0.0, 0.2126, 0.7152, 0.0722, 0.0, 0.0, 0.2126,
@@ -43,15 +45,15 @@ pub fn register(engine: &mut Engine) {
 
             if let Some(eff) = effect {
                 let id = apply_effect_to_node(&mut d, node.id, eff);
-                NodeHandle {
+                Ok(NodeHandle {
                     director: node.director.clone(),
                     id,
-                }
+                })
             } else {
-                NodeHandle {
+                Ok(NodeHandle {
                     director: node.director.clone(),
                     id: node.id,
-                }
+                })
             }
         },
     );
@@ -59,8 +61,12 @@ pub fn register(engine: &mut Engine) {
     // Effects with a value parameter
     engine.register_fn(
         "apply_effect",
-        |node: &mut NodeHandle, name: &str, val: f64| -> NodeHandle {
-            let mut d = node.director.lock().unwrap();
+        |node: &mut NodeHandle,
+         name: &str,
+         val: f64|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = node.lock_director()?;
+            node.ensure_alive(&d)?;
             let val = val as f32;
             let effect = match name {
                 "contrast" => {
@@ -80,15 +86,15 @@ pub fn register(engine: &mut Engine) {
 
             if let Some(eff) = effect {
                 let id = apply_effect_to_node(&mut d, node.id, eff);
-                NodeHandle {
+                Ok(NodeHandle {
                     director: node.director.clone(),
                     id,
-                }
+                })
             } else {
-                NodeHandle {
+                Ok(NodeHandle {
                     director: node.director.clone(),
                     id: node.id,
-                }
+                })
             }
         },
     );
@@ -96,8 +102,12 @@ pub fn register(engine: &mut Engine) {
     // Custom shader effects and cinematic effects (directional_blur, grain)
     engine.register_fn(
         "apply_effect",
-        |node: &mut NodeHandle, name: &str, map: rhai::Map| -> NodeHandle {
-            let mut d = node.director.lock().unwrap();
+        |node: &mut NodeHandle,
+         name: &str,
+         map: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = node.lock_director()?;
+            node.ensure_alive(&d)?;
 
             let effect = match name {
                 "shader" => {
@@ -182,15 +192,15 @@ pub fn register(engine: &mut Engine) {
 
             if let Some(eff) = effect {
                 let id = apply_effect_to_node(&mut d, node.id, eff);
-                NodeHandle {
+                Ok(NodeHandle {
                     director: node.director.clone(),
                     id,
-                }
+                })
             } else {
-                NodeHandle {
+                Ok(NodeHandle {
                     director: node.director.clone(),
                     id: node.id,
-                }
+                })
             }
         },
     );

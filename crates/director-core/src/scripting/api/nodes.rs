@@ -11,6 +11,7 @@
 //! - **SVG Nodes**: `add_svg` for vector graphics
 //! - **Composition Nodes**: `add_composition` for nested compositions
 //! - **Node Destruction**: `destroy` to remove nodes
+//! - **Safety Guards**: stale-handle checks and parent/child attachment validation
 
 use crate::animation::Animated;
 use crate::element::TextFit;
@@ -34,116 +35,127 @@ use super::super::utils::{
 pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
     engine.register_type_with_name::<NodeHandle>("Node");
 
-    engine.register_fn("destroy", |node: &mut NodeHandle| {
-        let mut d = node.director.lock().unwrap();
-        d.scene.destroy_node(node.id);
-    });
+    engine.register_fn(
+        "destroy",
+        |node: &mut NodeHandle| -> Result<(), Box<rhai::EvalAltResult>> {
+            let mut d = node.lock_director()?;
+            node.ensure_alive(&d)?;
+            d.scene.destroy_node(node.id);
+            Ok(())
+        },
+    );
 
     // ========== ADD_BOX ==========
-    engine.register_fn("add_box", |parent: &mut NodeHandle, props: rhai::Map| {
-        let mut d = parent.director.lock().unwrap();
-        let mut box_node = BoxNode::new();
-        apply_box_props(&mut box_node, &props);
-        parse_layout_style(&props, &mut box_node.style);
-
-        let id = d.scene.add_node(Box::new(box_node));
-        if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
-            if let Some(n) = d.scene.get_node_mut(id) {
-                n.z_index = z as i32;
-            }
-        }
-        d.scene.add_child(parent.id, id);
-
-        NodeHandle {
-            director: parent.director.clone(),
-            id,
-        }
-    });
-
-    engine.register_fn("add_box", |scene: &mut SceneHandle, props: rhai::Map| {
-        let mut d = scene.director.lock().unwrap();
-        let mut box_node = BoxNode::new();
-        apply_box_props(&mut box_node, &props);
-        parse_layout_style(&props, &mut box_node.style);
-
-        let id = d.scene.add_node(Box::new(box_node));
-        if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
-            if let Some(n) = d.scene.get_node_mut(id) {
-                n.z_index = z as i32;
-            }
-        }
-        d.scene.add_child(scene.root_id, id);
-
-        NodeHandle {
-            director: scene.director.clone(),
-            id,
-        }
-    });
-
-    // ========== ADD_IMAGE ==========
-
-    engine.register_fn("add_image", move |parent: &mut NodeHandle, path: &str| {
-        let mut d = parent.director.lock().unwrap();
-        let image = d.assets.load_image(path);
-
-        let img_node = ImageNode::from_image(image);
-        let id = d.scene.add_node(Box::new(img_node));
-        d.scene.add_child(parent.id, id);
-        NodeHandle {
-            director: parent.director.clone(),
-            id,
-        }
-    });
-
-    engine.register_fn("add_image", |scene: &mut SceneHandle, path: &str| {
-        let mut d = scene.director.lock().unwrap();
-        let image = d.assets.load_image(path);
-
-        let img_node = ImageNode::from_image(image);
-        let id = d.scene.add_node(Box::new(img_node));
-        d.scene.add_child(scene.root_id, id);
-        NodeHandle {
-            director: scene.director.clone(),
-            id,
-        }
-    });
-
     engine.register_fn(
-        "add_image",
-        |scene: &mut SceneHandle, path: &str, props: rhai::Map| {
-            let mut d = scene.director.lock().unwrap();
-            let image = d.assets.load_image(path);
+        "add_box",
+        |parent: &mut NodeHandle,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
+            let mut box_node = BoxNode::new();
+            apply_box_props(&mut box_node, &props);
+            parse_layout_style(&props, &mut box_node.style);
 
-            let mut img_node = ImageNode::from_image(image);
-            parse_layout_style(&props, &mut img_node.style);
-
-            if let Some(fit_str) = props
-                .get("object_fit")
-                .and_then(|v| v.clone().into_string().ok())
-            {
-                if let Some(fit) = parse_object_fit(&fit_str) {
-                    img_node.object_fit = fit;
-                }
-            }
-
-            let id = d.scene.add_node(Box::new(img_node));
+            let id = d.scene.add_node(Box::new(box_node));
             if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
                 if let Some(n) = d.scene.get_node_mut(id) {
                     n.z_index = z as i32;
                 }
             }
-            d.scene.add_child(scene.root_id, id);
-            NodeHandle {
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(format!("Failed to attach node {} to parent {}", id, parent.id).into());
+            }
+
+            Ok(NodeHandle {
+                director: parent.director.clone(),
+                id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_box",
+        |scene: &mut SceneHandle,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
+            let mut box_node = BoxNode::new();
+            apply_box_props(&mut box_node, &props);
+            parse_layout_style(&props, &mut box_node.style);
+
+            let id = d.scene.add_node(Box::new(box_node));
+            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
+                if let Some(n) = d.scene.get_node_mut(id) {
+                    n.z_index = z as i32;
+                }
+            }
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(format!("Failed to attach node {} to scene root {}", id, scene.root_id).into());
+            }
+
+            Ok(NodeHandle {
                 director: scene.director.clone(),
                 id,
+            })
+        },
+    );
+
+    // ========== ADD_IMAGE ==========
+
+    engine.register_fn(
+        "add_image",
+        move |parent: &mut NodeHandle,
+              path: &str|
+              -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
+            let image = d.assets.load_image(path);
+
+            let img_node = ImageNode::from_image(image);
+            let id = d.scene.add_node(Box::new(img_node));
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(format!("Failed to attach image node {} to parent {}", id, parent.id).into());
             }
+            Ok(NodeHandle {
+                director: parent.director.clone(),
+                id,
+            })
         },
     );
 
     engine.register_fn(
         "add_image",
-        |parent: &mut NodeHandle, path: &str, props: rhai::Map| {
-            let mut d = parent.director.lock().unwrap();
+        |scene: &mut SceneHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
+            let image = d.assets.load_image(path);
+
+            let img_node = ImageNode::from_image(image);
+            let id = d.scene.add_node(Box::new(img_node));
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach image node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
+            }
+            Ok(NodeHandle {
+                director: scene.director.clone(),
+                id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_image",
+        |scene: &mut SceneHandle,
+         path: &str,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
             let image = d.assets.load_image(path);
 
             let mut img_node = ImageNode::from_image(image);
@@ -164,11 +176,58 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
                     n.z_index = z as i32;
                 }
             }
-            d.scene.add_child(parent.id, id);
-            NodeHandle {
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach image node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
+            }
+            Ok(NodeHandle {
+                director: scene.director.clone(),
+                id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_image",
+        |parent: &mut NodeHandle,
+         path: &str,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
+            let image = d.assets.load_image(path);
+
+            let mut img_node = ImageNode::from_image(image);
+            parse_layout_style(&props, &mut img_node.style);
+
+            if let Some(fit_str) = props
+                .get("object_fit")
+                .and_then(|v| v.clone().into_string().ok())
+            {
+                if let Some(fit) = parse_object_fit(&fit_str) {
+                    img_node.object_fit = fit;
+                }
+            }
+
+            let id = d.scene.add_node(Box::new(img_node));
+            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
+                if let Some(n) = d.scene.get_node_mut(id) {
+                    n.z_index = z as i32;
+                }
+            }
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach image node {} to parent {}", id, parent.id).into(),
+                );
+            }
+            Ok(NodeHandle {
                 director: parent.director.clone(),
                 id,
-            }
+            })
         },
     );
 
@@ -176,13 +235,20 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
     engine.register_fn(
         "add_lottie",
         |parent: &mut NodeHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
-            let mut d = parent.director.lock().unwrap();
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
             let blob = d.assets.load_blob(path).map_err(|e| e.to_string())?;
 
             match LottieNode::new(&blob, HashMap::new(), &d.assets) {
                 Ok(lottie_node) => {
                     let id = d.scene.add_node(Box::new(lottie_node));
-                    d.scene.add_child(parent.id, id);
+                    if !d.scene.try_add_child(parent.id, id) {
+                        d.scene.destroy_node(id);
+                        return Err(
+                            format!("Failed to attach lottie node {} to parent {}", id, parent.id)
+                                .into(),
+                        );
+                    }
                     Ok(NodeHandle {
                         director: parent.director.clone(),
                         id,
@@ -199,7 +265,8 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
          path: &str,
          props: rhai::Map|
          -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
-            let mut d = parent.director.lock().unwrap();
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
             let blob = d.assets.load_blob(path).map_err(|e| e.to_string())?;
 
             let mut assets_map = HashMap::new();
@@ -232,7 +299,13 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
                             n.z_index = z as i32;
                         }
                     }
-                    d.scene.add_child(parent.id, id);
+                    if !d.scene.try_add_child(parent.id, id) {
+                        d.scene.destroy_node(id);
+                        return Err(
+                            format!("Failed to attach lottie node {} to parent {}", id, parent.id)
+                                .into(),
+                        );
+                    }
                     Ok(NodeHandle {
                         director: parent.director.clone(),
                         id,
@@ -249,7 +322,7 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
          path: &str,
          props: rhai::Map|
          -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
-            let mut d = scene.director.lock().unwrap();
+            let mut d = scene.lock_director()?;
             let blob = d.assets.load_blob(path).map_err(|e| e.to_string())?;
 
             let mut assets_map = HashMap::new();
@@ -282,7 +355,14 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
                             n.z_index = z as i32;
                         }
                     }
-                    d.scene.add_child(scene.root_id, id);
+                    if !d.scene.try_add_child(scene.root_id, id) {
+                        d.scene.destroy_node(id);
+                        return Err(format!(
+                            "Failed to attach lottie node {} to scene root {}",
+                            id, scene.root_id
+                        )
+                        .into());
+                    }
                     Ok(NodeHandle {
                         director: scene.director.clone(),
                         id,
@@ -294,59 +374,35 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
     );
 
     // ========== ADD_SVG ==========
-    engine.register_fn("add_svg", |scene: &mut SceneHandle, path: &str| {
-        let mut d = scene.director.lock().unwrap();
-        let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
-
-        let vec_node = VectorNode::new(&blob);
-        let id = d.scene.add_node(Box::new(vec_node));
-        d.scene.add_child(scene.root_id, id);
-        NodeHandle {
-            director: scene.director.clone(),
-            id,
-        }
-    });
-
     engine.register_fn(
         "add_svg",
-        |scene: &mut SceneHandle, path: &str, props: rhai::Map| {
-            let mut d = scene.director.lock().unwrap();
+        |scene: &mut SceneHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
             let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
 
-            let mut vec_node = VectorNode::new(&blob);
-            parse_layout_style(&props, &mut vec_node.style);
-
+            let vec_node = VectorNode::new(&blob);
             let id = d.scene.add_node(Box::new(vec_node));
-            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
-                if let Some(n) = d.scene.get_node_mut(id) {
-                    n.z_index = z as i32;
-                }
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach svg node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
             }
-            d.scene.add_child(scene.root_id, id);
-            NodeHandle {
+            Ok(NodeHandle {
                 director: scene.director.clone(),
                 id,
-            }
+            })
         },
     );
 
-    engine.register_fn("add_svg", |parent: &mut NodeHandle, path: &str| {
-        let mut d = parent.director.lock().unwrap();
-        let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
-
-        let vec_node = VectorNode::new(&blob);
-        let id = d.scene.add_node(Box::new(vec_node));
-        d.scene.add_child(parent.id, id);
-        NodeHandle {
-            director: parent.director.clone(),
-            id,
-        }
-    });
-
     engine.register_fn(
         "add_svg",
-        |parent: &mut NodeHandle, path: &str, props: rhai::Map| {
-            let mut d = parent.director.lock().unwrap();
+        |scene: &mut SceneHandle,
+         path: &str,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
             let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
 
             let mut vec_node = VectorNode::new(&blob);
@@ -358,40 +414,80 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
                     n.z_index = z as i32;
                 }
             }
-            d.scene.add_child(parent.id, id);
-            NodeHandle {
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach svg node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
+            }
+            Ok(NodeHandle {
+                director: scene.director.clone(),
+                id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_svg",
+        |parent: &mut NodeHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
+            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+
+            let vec_node = VectorNode::new(&blob);
+            let id = d.scene.add_node(Box::new(vec_node));
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach svg node {} to parent {}", id, parent.id).into(),
+                );
+            }
+            Ok(NodeHandle {
                 director: parent.director.clone(),
                 id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_svg",
+        |parent: &mut NodeHandle,
+         path: &str,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
+            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+
+            let mut vec_node = VectorNode::new(&blob);
+            parse_layout_style(&props, &mut vec_node.style);
+
+            let id = d.scene.add_node(Box::new(vec_node));
+            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
+                if let Some(n) = d.scene.get_node_mut(id) {
+                    n.z_index = z as i32;
+                }
             }
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach svg node {} to parent {}", id, parent.id).into(),
+                );
+            }
+            Ok(NodeHandle {
+                director: parent.director.clone(),
+                id,
+            })
         },
     );
 
     // ========== ADD_VIDEO ==========
-    engine.register_fn("add_video", |parent: &mut NodeHandle, path: &str| {
-        let mut d = parent.director.lock().unwrap();
-        let mode = d.render_mode;
-        let p = std::path::Path::new(path);
-
-        let source = if p.exists() && p.is_file() {
-            VideoSource::Path(p.to_path_buf())
-        } else {
-            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
-            VideoSource::Bytes((*blob).clone())
-        };
-
-        let vid_node = VideoNode::new(source, mode);
-        let id = d.scene.add_node(Box::new(vid_node));
-        d.scene.add_child(parent.id, id);
-        NodeHandle {
-            director: parent.director.clone(),
-            id,
-        }
-    });
-
     engine.register_fn(
         "add_video",
-        |parent: &mut NodeHandle, path: &str, props: rhai::Map| {
-            let mut d = parent.director.lock().unwrap();
+        |parent: &mut NodeHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
             let mode = d.render_mode;
             let p = std::path::Path::new(path);
 
@@ -402,57 +498,29 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
                 VideoSource::Bytes((*blob).clone())
             };
 
-            let mut vid_node = VideoNode::new(source, mode);
-            parse_layout_style(&props, &mut vid_node.style);
-
-            if let Some(fit_str) = props
-                .get("object_fit")
-                .and_then(|v| v.clone().into_string().ok())
-            {
-                if let Some(fit) = parse_object_fit(&fit_str) {
-                    vid_node.object_fit = fit;
-                }
-            }
-
+            let vid_node = VideoNode::new(source, mode);
             let id = d.scene.add_node(Box::new(vid_node));
-            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
-                if let Some(n) = d.scene.get_node_mut(id) {
-                    n.z_index = z as i32;
-                }
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach video node {} to parent {}", id, parent.id).into(),
+                );
             }
-            d.scene.add_child(parent.id, id);
-            NodeHandle {
+            Ok(NodeHandle {
                 director: parent.director.clone(),
                 id,
-            }
+            })
         },
     );
 
-    engine.register_fn("add_video", |scene: &mut SceneHandle, path: &str| {
-        let mut d = scene.director.lock().unwrap();
-        let mode = d.render_mode;
-        let p = std::path::Path::new(path);
-
-        let source = if p.exists() && p.is_file() {
-            VideoSource::Path(p.to_path_buf())
-        } else {
-            let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
-            VideoSource::Bytes((*blob).clone())
-        };
-
-        let vid_node = VideoNode::new(source, mode);
-        let id = d.scene.add_node(Box::new(vid_node));
-        d.scene.add_child(scene.root_id, id);
-        NodeHandle {
-            director: scene.director.clone(),
-            id,
-        }
-    });
-
     engine.register_fn(
         "add_video",
-        |scene: &mut SceneHandle, path: &str, props: rhai::Map| {
-            let mut d = scene.director.lock().unwrap();
+        |parent: &mut NodeHandle,
+         path: &str,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
             let mode = d.render_mode;
             let p = std::path::Path::new(path);
 
@@ -481,144 +549,263 @@ pub fn register(engine: &mut Engine, _loader: Arc<dyn AssetLoader>) {
                     n.z_index = z as i32;
                 }
             }
-            d.scene.add_child(scene.root_id, id);
-            NodeHandle {
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach video node {} to parent {}", id, parent.id).into(),
+                );
+            }
+            Ok(NodeHandle {
+                director: parent.director.clone(),
+                id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_video",
+        |scene: &mut SceneHandle, path: &str| -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
+            let mode = d.render_mode;
+            let p = std::path::Path::new(path);
+
+            let source = if p.exists() && p.is_file() {
+                VideoSource::Path(p.to_path_buf())
+            } else {
+                let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+                VideoSource::Bytes((*blob).clone())
+            };
+
+            let vid_node = VideoNode::new(source, mode);
+            let id = d.scene.add_node(Box::new(vid_node));
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach video node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
+            }
+            Ok(NodeHandle {
                 director: scene.director.clone(),
                 id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_video",
+        |scene: &mut SceneHandle,
+         path: &str,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
+            let mode = d.render_mode;
+            let p = std::path::Path::new(path);
+
+            let source = if p.exists() && p.is_file() {
+                VideoSource::Path(p.to_path_buf())
+            } else {
+                let blob = d.assets.load_blob(path).unwrap_or(Arc::new(Vec::new()));
+                VideoSource::Bytes((*blob).clone())
+            };
+
+            let mut vid_node = VideoNode::new(source, mode);
+            parse_layout_style(&props, &mut vid_node.style);
+
+            if let Some(fit_str) = props
+                .get("object_fit")
+                .and_then(|v| v.clone().into_string().ok())
+            {
+                if let Some(fit) = parse_object_fit(&fit_str) {
+                    vid_node.object_fit = fit;
+                }
             }
+
+            let id = d.scene.add_node(Box::new(vid_node));
+            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
+                if let Some(n) = d.scene.get_node_mut(id) {
+                    n.z_index = z as i32;
+                }
+            }
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach video node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
+            }
+            Ok(NodeHandle {
+                director: scene.director.clone(),
+                id,
+            })
         },
     );
 
     // ========== ADD_TEXT ==========
-    engine.register_fn("add_text", |parent: &mut NodeHandle, props: rhai::Map| {
-        let mut d = parent.director.lock().unwrap();
-        let font_collection = d.assets.font_collection.clone();
+    engine.register_fn(
+        "add_text",
+        |parent: &mut NodeHandle,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = parent.lock_director()?;
+            parent.ensure_alive(&d)?;
+            let font_collection = d.assets.font_collection.clone();
 
-        let spans = if let Some(c) = props.get("content") {
-            parse_spans_from_dynamic(c.clone())
-        } else {
-            Vec::new()
-        };
+            let spans = if let Some(c) = props.get("content") {
+                parse_spans_from_dynamic(c.clone())
+            } else {
+                Vec::new()
+            };
 
-        let mut text_node = TextNode::new(spans, font_collection);
-        apply_text_props(&mut text_node, &props);
-        parse_layout_style(&props, &mut text_node.style);
-        text_node.shadow = parse_text_shadow(&props);
-        text_node.init_paragraph();
+            let mut text_node = TextNode::new(spans, font_collection);
+            apply_text_props(&mut text_node, &props);
+            parse_layout_style(&props, &mut text_node.style);
+            text_node.shadow = parse_text_shadow(&props);
+            text_node.init_paragraph();
 
-        let id = d.scene.add_node(Box::new(text_node));
-        if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
-            if let Some(n) = d.scene.get_node_mut(id) {
-                n.z_index = z as i32;
+            let id = d.scene.add_node(Box::new(text_node));
+            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
+                if let Some(n) = d.scene.get_node_mut(id) {
+                    n.z_index = z as i32;
+                }
             }
-        }
-        d.scene.add_child(parent.id, id);
-
-        NodeHandle {
-            director: parent.director.clone(),
-            id,
-        }
-    });
-
-    engine.register_fn("add_text", |scene: &mut SceneHandle, props: rhai::Map| {
-        let mut d = scene.director.lock().unwrap();
-        let font_collection = d.assets.font_collection.clone();
-
-        let spans = if let Some(c) = props.get("content") {
-            parse_spans_from_dynamic(c.clone())
-        } else {
-            Vec::new()
-        };
-
-        let mut text_node = TextNode::new(spans, font_collection);
-        apply_text_props(&mut text_node, &props);
-        parse_layout_style(&props, &mut text_node.style);
-        text_node.shadow = parse_text_shadow(&props);
-        text_node.init_paragraph();
-
-        let id = d.scene.add_node(Box::new(text_node));
-        if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
-            if let Some(n) = d.scene.get_node_mut(id) {
-                n.z_index = z as i32;
+            if !d.scene.try_add_child(parent.id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach text node {} to parent {}", id, parent.id).into(),
+                );
             }
-        }
-        d.scene.add_child(scene.root_id, id);
 
-        NodeHandle {
-            director: scene.director.clone(),
-            id,
-        }
-    });
+            Ok(NodeHandle {
+                director: parent.director.clone(),
+                id,
+            })
+        },
+    );
+
+    engine.register_fn(
+        "add_text",
+        |scene: &mut SceneHandle,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
+            let mut d = scene.lock_director()?;
+            let font_collection = d.assets.font_collection.clone();
+
+            let spans = if let Some(c) = props.get("content") {
+                parse_spans_from_dynamic(c.clone())
+            } else {
+                Vec::new()
+            };
+
+            let mut text_node = TextNode::new(spans, font_collection);
+            apply_text_props(&mut text_node, &props);
+            parse_layout_style(&props, &mut text_node.style);
+            text_node.shadow = parse_text_shadow(&props);
+            text_node.init_paragraph();
+
+            let id = d.scene.add_node(Box::new(text_node));
+            if let Some(z) = props.get("z_index").and_then(|v| v.as_int().ok()) {
+                if let Some(n) = d.scene.get_node_mut(id) {
+                    n.z_index = z as i32;
+                }
+            }
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!("Failed to attach text node {} to scene root {}", id, scene.root_id)
+                        .into(),
+                );
+            }
+
+            Ok(NodeHandle {
+                director: scene.director.clone(),
+                id,
+            })
+        },
+    );
 
     // ========== ADD_COMPOSITION ==========
     engine.register_fn(
         "add_composition",
-        |scene: &mut SceneHandle, comp_def: MovieHandle| {
+        |scene: &mut SceneHandle,
+         comp_def: MovieHandle|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
             // Cycle Detection
             if Arc::ptr_eq(&scene.director, &comp_def.director) {
                 error!("Cycle detected. A composition cannot contain itself.");
-                let mut d = scene.director.lock().unwrap();
-                let id = d.scene.add_node(Box::new(BoxNode::new()));
-                return NodeHandle {
-                    director: scene.director.clone(),
-                    id,
-                };
+                return Err("A composition cannot contain itself".into());
             }
 
-            let mut inner_director = comp_def.director.lock().unwrap().clone();
+            let mut inner_director = comp_def.lock_director()?.clone();
 
             // Share resources from parent
             {
-                let parent = scene.director.lock().unwrap();
+                let parent = scene.lock_director()?;
                 inner_director.assets = parent.assets.clone();
             }
 
             let comp_node = CompositionNode::new(inner_director);
 
-            let mut d = scene.director.lock().unwrap();
+            let mut d = scene.lock_director()?;
             let id = d.scene.add_node(Box::new(comp_node));
-            d.scene.add_child(scene.root_id, id);
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!(
+                        "Failed to attach composition node {} to scene root {}",
+                        id, scene.root_id
+                    )
+                    .into(),
+                );
+            }
 
-            NodeHandle {
+            Ok(NodeHandle {
                 director: scene.director.clone(),
                 id,
-            }
+            })
         },
     );
 
     engine.register_fn(
         "add_composition",
-        |scene: &mut SceneHandle, comp_def: MovieHandle, props: rhai::Map| {
+        |scene: &mut SceneHandle,
+         comp_def: MovieHandle,
+         props: rhai::Map|
+         -> Result<NodeHandle, Box<rhai::EvalAltResult>> {
             // Cycle Detection
             if Arc::ptr_eq(&scene.director, &comp_def.director) {
                 error!("Cycle detected. A composition cannot contain itself.");
-                let mut d = scene.director.lock().unwrap();
-                let id = d.scene.add_node(Box::new(BoxNode::new()));
-                return NodeHandle {
-                    director: scene.director.clone(),
-                    id,
-                };
+                return Err("A composition cannot contain itself".into());
             }
 
-            let mut inner_director = comp_def.director.lock().unwrap().clone();
+            let mut inner_director = comp_def.lock_director()?.clone();
 
             // Share resources from parent
             {
-                let parent = scene.director.lock().unwrap();
+                let parent = scene.lock_director()?;
                 inner_director.assets = parent.assets.clone();
             }
 
             let mut comp_node = CompositionNode::new(inner_director);
             parse_layout_style(&props, &mut comp_node.style);
 
-            let mut d = scene.director.lock().unwrap();
+            let mut d = scene.lock_director()?;
             let id = d.scene.add_node(Box::new(comp_node));
-            d.scene.add_child(scene.root_id, id);
+            if !d.scene.try_add_child(scene.root_id, id) {
+                d.scene.destroy_node(id);
+                return Err(
+                    format!(
+                        "Failed to attach composition node {} to scene root {}",
+                        id, scene.root_id
+                    )
+                    .into(),
+                );
+            }
 
-            NodeHandle {
+            Ok(NodeHandle {
                 director: scene.director.clone(),
                 id,
-            }
+            })
         },
     );
 }

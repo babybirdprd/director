@@ -7,7 +7,7 @@
 //! ## Responsibilities
 //! - **Node Storage**: `Vec<Option<SceneNode>>` arena with `NodeId` indices.
 //! - **Hierarchy**: Parent-child relationships via `children` and `parent`.
-//! - **Node Operations**: Add, remove, reparent nodes.
+//! - **Node Operations**: Add, remove, reparent nodes with cycle prevention.
 //!
 //! ## Key Types
 //! - `SceneGraph`: The arena container.
@@ -142,7 +142,9 @@ impl SceneGraph {
 
         // 2. Collect IDs to process (to avoid holding borrows on self.nodes)
         let (parent_id, children_ids) = {
-            let node = self.nodes[id].as_ref().unwrap();
+            let Some(node) = self.nodes[id].as_ref() else {
+                return;
+            };
             (node.parent, node.children.clone())
         };
 
@@ -162,21 +164,72 @@ impl SceneGraph {
     }
 
     /// Establishes a parent-child relationship between two nodes.
+    ///
+    /// Invalid relationships (missing nodes, self-parenting, cycles) are ignored.
     pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
-        if let Some(p_node) = self.nodes.get_mut(parent).and_then(|n| n.as_mut()) {
-            p_node.children.push(child);
+        let _ = self.try_add_child(parent, child);
+    }
+
+    /// Attempts to establish a parent-child relationship between two nodes.
+    ///
+    /// Returns `true` when the relationship is created and `false` when rejected
+    /// (missing nodes, self-parenting, or cycle detection).
+    pub fn try_add_child(&mut self, parent: NodeId, child: NodeId) -> bool {
+        if parent == child {
+            return false;
         }
+
+        // Both nodes must exist.
+        if self.get_node(parent).is_none() || self.get_node(child).is_none() {
+            return false;
+        }
+
+        // Prevent hierarchy cycles by checking whether `child` is an ancestor of `parent`.
+        let mut current = Some(parent);
+        while let Some(node_id) = current {
+            if node_id == child {
+                return false;
+            }
+            current = self.get_node(node_id).and_then(|n| n.parent);
+        }
+
+        // Detach from previous parent if re-parenting.
+        let old_parent = self.get_node(child).and_then(|n| n.parent);
+        if let Some(old_parent_id) = old_parent {
+            if old_parent_id == parent {
+                // Already correctly parented.
+                return true;
+            }
+            self.remove_child(old_parent_id, child);
+        }
+
+        if let Some(p_node) = self.nodes.get_mut(parent).and_then(|n| n.as_mut()) {
+            if !p_node.children.contains(&child) {
+                p_node.children.push(child);
+            }
+        } else {
+            return false;
+        }
+
         if let Some(c_node) = self.nodes.get_mut(child).and_then(|n| n.as_mut()) {
             c_node.parent = Some(parent);
+            true
+        } else {
+            false
         }
     }
 
     /// Removes a child from a parent node's children list.
-    /// Does NOT affect the child's `parent` field (caller must handle that if needed, e.g. re-parenting).
+    /// Also clears the child's `parent` field when it points to this parent.
     pub fn remove_child(&mut self, parent: NodeId, child: NodeId) {
         if let Some(p_node) = self.nodes.get_mut(parent).and_then(|n| n.as_mut()) {
             if let Some(pos) = p_node.children.iter().position(|&x| x == child) {
                 p_node.children.remove(pos);
+            }
+        }
+        if let Some(c_node) = self.nodes.get_mut(child).and_then(|n| n.as_mut()) {
+            if c_node.parent == Some(parent) {
+                c_node.parent = None;
             }
         }
     }
@@ -189,5 +242,54 @@ impl SceneGraph {
     /// Returns a shared reference to the SceneNode.
     pub fn get_node(&self, id: NodeId) -> Option<&SceneNode> {
         self.nodes.get(id).and_then(|n| n.as_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SceneGraph;
+    use crate::node::BoxNode;
+
+    #[test]
+    fn add_child_rejects_self_parent() {
+        let mut scene = SceneGraph::new();
+        let id = scene.add_node(Box::new(BoxNode::new()));
+
+        assert!(!scene.try_add_child(id, id));
+        assert!(scene.get_node(id).is_some());
+    }
+
+    #[test]
+    fn add_child_rejects_cycle() {
+        let mut scene = SceneGraph::new();
+        let a = scene.add_node(Box::new(BoxNode::new()));
+        let b = scene.add_node(Box::new(BoxNode::new()));
+        let c = scene.add_node(Box::new(BoxNode::new()));
+
+        assert!(scene.try_add_child(a, b));
+        assert!(scene.try_add_child(b, c));
+        assert!(
+            !scene.try_add_child(c, a),
+            "cycle creation must be rejected"
+        );
+    }
+
+    #[test]
+    fn reparent_child_detaches_from_old_parent() {
+        let mut scene = SceneGraph::new();
+        let p1 = scene.add_node(Box::new(BoxNode::new()));
+        let p2 = scene.add_node(Box::new(BoxNode::new()));
+        let child = scene.add_node(Box::new(BoxNode::new()));
+
+        assert!(scene.try_add_child(p1, child));
+        assert!(scene.try_add_child(p2, child));
+
+        let p1_node = scene.get_node(p1).unwrap();
+        let p2_node = scene.get_node(p2).unwrap();
+        let child_node = scene.get_node(child).unwrap();
+
+        assert!(!p1_node.children.contains(&child));
+        assert!(p2_node.children.contains(&child));
+        assert_eq!(child_node.parent, Some(p2));
     }
 }
