@@ -4,8 +4,14 @@ import { useProjectStore } from '@/stores/project';
 import { Video, AlertTriangle, RefreshCw } from 'lucide-react';
 
 function App() {
-    const { checkBackend, backendConnected, runScript } = useProjectStore();
-    const [showWelcome, setShowWelcome] = useState(true);
+    const {
+        checkBackend,
+        backendConnected,
+        runScript,
+        loadAvailableScripts,
+        selectScript,
+    } = useProjectStore();
+    const [hasInitializedScript, setHasInitializedScript] = useState(false);
 
     // Check backend connection on mount
     useEffect(() => {
@@ -14,16 +20,38 @@ function App() {
         return () => clearInterval(interval);
     }, [checkBackend]);
 
-    // Auto-run default script on first load
+    // Load script catalog on first backend connect, then auto-run first script.
     useEffect(() => {
-        if (backendConnected && showWelcome) {
-            // Give a moment for the UI to render
-            const timer = setTimeout(() => {
-                runScript().then(() => setShowWelcome(false));
-            }, 500);
-            return () => clearTimeout(timer);
+        if (!backendConnected || hasInitializedScript) {
+            return;
         }
-    }, [backendConnected, showWelcome, runScript]);
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            try {
+                await loadAvailableScripts();
+                const { availableScripts } = useProjectStore.getState();
+                if (cancelled) {
+                    return;
+                }
+
+                if (availableScripts.length > 0) {
+                    await selectScript(availableScripts[0].path);
+                } else {
+                    await runScript();
+                }
+            } finally {
+                if (!cancelled) {
+                    setHasInitializedScript(true);
+                }
+            }
+        }, 500);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [backendConnected, hasInitializedScript, loadAvailableScripts, runScript, selectScript]);
 
     return (
         <div className="h-full flex flex-col bg-director-bg">

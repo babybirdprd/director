@@ -18,6 +18,7 @@
 //! - `GET/POST /api/init`
 //! - `GET /api/render`
 //! - `GET /api/scenes`
+//! - `GET /api/scripts`
 //! - `GET/POST /api/file`
 //! - `POST /api/export`
 //! - `GET /api/health`
@@ -111,6 +112,13 @@ struct SceneInfo {
     start_time: f64,
     duration: f64,
     name: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+struct ScriptListItem {
+    path: String,
+    name: String,
+    group: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -308,6 +316,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/init", get(init_handler_get).post(init_handler_post))
         .route("/api/render", get(render_handler))
         .route("/api/scenes", get(scenes_handler))
+        .route("/api/scripts", get(scripts_handler))
         .route("/api/file", get(file_handler).post(write_file_handler))
         .route("/api/export", post(export_handler))
         .route("/api/health", get(health_handler))
@@ -472,6 +481,149 @@ fn discover_allowed_roots() -> Vec<PathBuf> {
     roots.sort();
     roots.dedup();
     roots
+}
+
+fn discover_example_scripts(allowed_roots: &[PathBuf]) -> Result<Vec<ScriptListItem>, ApiError> {
+    if allowed_roots.is_empty() {
+        return Err(ApiError::new(
+            "No filesystem roots configured; refusing script discovery",
+        ));
+    }
+
+    let workspace_root = &allowed_roots[0];
+    let examples_root = workspace_root.join("examples");
+    if !examples_root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let canonical_examples = examples_root.canonicalize().map_err(|e| {
+        ApiError::new(format!(
+            "Failed to resolve examples directory '{}': {}",
+            examples_root.display(),
+            e
+        ))
+    })?;
+    ensure_within_allowed_roots(&canonical_examples, allowed_roots)?;
+    if !canonical_examples.is_dir() {
+        return Err(ApiError::new(format!(
+            "Examples path is not a directory: {}",
+            canonical_examples.display()
+        )));
+    }
+
+    let mut scripts = Vec::new();
+    collect_rhai_scripts(
+        &canonical_examples,
+        workspace_root,
+        &canonical_examples,
+        &mut scripts,
+    )?;
+
+    scripts.sort_by(|a, b| {
+        a.group
+            .cmp(&b.group)
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.path.cmp(&b.path))
+    });
+    Ok(scripts)
+}
+
+fn collect_rhai_scripts(
+    current_dir: &Path,
+    workspace_root: &Path,
+    examples_root: &Path,
+    scripts: &mut Vec<ScriptListItem>,
+) -> Result<(), ApiError> {
+    let entries = std::fs::read_dir(current_dir).map_err(|e| {
+        ApiError::new(format!(
+            "Failed to read script directory '{}': {}",
+            current_dir.display(),
+            e
+        ))
+    })?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| {
+            ApiError::new(format!(
+                "Failed to read entry in '{}': {}",
+                current_dir.display(),
+                e
+            ))
+        })?;
+
+        let file_type = entry.file_type().map_err(|e| {
+            ApiError::new(format!(
+                "Failed to inspect entry type '{}': {}",
+                entry.path().display(),
+                e
+            ))
+        })?;
+
+        // Skip symlinks to avoid directory cycles and out-of-tree indirection.
+        if file_type.is_symlink() {
+            continue;
+        }
+
+        let path = entry.path();
+        if file_type.is_dir() {
+            collect_rhai_scripts(&path, workspace_root, examples_root, scripts)?;
+            continue;
+        }
+
+        if !file_type.is_file() {
+            continue;
+        }
+
+        let is_rhai = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.eq_ignore_ascii_case("rhai"))
+            .unwrap_or(false);
+        if !is_rhai {
+            continue;
+        }
+
+        let rel_workspace = path.strip_prefix(workspace_root).map_err(|_| {
+            ApiError::new(format!(
+                "Discovered script outside workspace root: {}",
+                path.display()
+            ))
+        })?;
+        let rel_examples = path.strip_prefix(examples_root).map_err(|_| {
+            ApiError::new(format!(
+                "Discovered script outside examples directory: {}",
+                path.display()
+            ))
+        })?;
+
+        let path_string = rel_workspace.to_string_lossy().replace('\\', "/");
+        let name = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or_default()
+            .to_string();
+
+        let group = rel_examples
+            .components()
+            .next()
+            .and_then(|component| component.as_os_str().to_str())
+            .map(|value| {
+                if value.ends_with(".rhai") {
+                    "root".to_string()
+                } else {
+                    value.to_string()
+                }
+            })
+            .unwrap_or_else(|| "root".to_string());
+
+        scripts.push(ScriptListItem {
+            path: path_string,
+            name,
+            group,
+        });
+    }
+
+    Ok(())
 }
 
 fn resolve_read_path(raw_path: &str, allowed_roots: &[PathBuf]) -> Result<PathBuf, ApiError> {
@@ -672,6 +824,13 @@ async fn scenes_handler(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
+async fn scripts_handler(State(state): State<AppState>) -> impl IntoResponse {
+    match discover_example_scripts(state.allowed_roots.as_ref()) {
+        Ok(scripts) => Json(scripts).into_response(),
+        Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, err),
+    }
+}
+
 #[derive(Deserialize)]
 struct FileParams {
     path: String,
@@ -765,15 +924,22 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
 
+    fn write_test_file(path: &Path) {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("create parent");
+        }
+        std::fs::write(path, "movie").expect("write file");
+    }
+
     #[test]
     fn read_path_is_restricted_to_allowed_roots() {
         let root = tempdir().expect("temp dir");
         let inside = root.path().join("inside.rhai");
-        std::fs::write(&inside, "movie").expect("write inside");
+        write_test_file(&inside);
 
         let outside_root = tempdir().expect("outside temp");
         let outside = outside_root.path().join("outside.rhai");
-        std::fs::write(&outside, "movie").expect("write outside");
+        write_test_file(&outside);
 
         let roots = vec![root.path().canonicalize().expect("canonical root")];
         assert!(resolve_read_path(inside.to_str().expect("inside str"), &roots).is_ok());
@@ -795,5 +961,70 @@ mod tests {
         std::fs::create_dir_all(&outside_parent).expect("outside parent");
         let outside = outside_parent.join("script.rhai");
         assert!(resolve_write_path(outside.to_str().expect("outside path"), &roots).is_err());
+    }
+
+    #[test]
+    fn discover_scripts_examples_only() {
+        let root = tempdir().expect("temp dir");
+        write_test_file(&root.path().join("examples").join("basics").join("hello.rhai"));
+        write_test_file(&root.path().join("examples").join("demo.rhai"));
+        write_test_file(&root.path().join("scripts").join("outside.rhai"));
+        write_test_file(&root.path().join("examples").join("notes.txt"));
+
+        let roots = vec![root.path().canonicalize().expect("canonical root")];
+        let scripts = discover_example_scripts(&roots).expect("discover scripts");
+
+        let paths: Vec<&str> = scripts.iter().map(|script| script.path.as_str()).collect();
+        assert!(paths.contains(&"examples/basics/hello.rhai"));
+        assert!(paths.contains(&"examples/demo.rhai"));
+        assert!(!paths.contains(&"scripts/outside.rhai"));
+        assert!(!paths.contains(&"examples/notes.txt"));
+    }
+
+    #[test]
+    fn discover_scripts_sorted_stably() {
+        let root = tempdir().expect("temp dir");
+        write_test_file(&root.path().join("examples").join("zebra.rhai"));
+        write_test_file(&root.path().join("examples").join("beta.rhai"));
+        write_test_file(&root.path().join("examples").join("basics").join("zeta.rhai"));
+        write_test_file(&root.path().join("examples").join("basics").join("alpha.rhai"));
+        write_test_file(
+            &root
+                .path()
+                .join("examples")
+                .join("basics")
+                .join("deep")
+                .join("alpha.rhai"),
+        );
+        write_test_file(&root.path().join("examples").join("features").join("alpha.rhai"));
+
+        let roots = vec![root.path().canonicalize().expect("canonical root")];
+        let scripts = discover_example_scripts(&roots).expect("discover scripts");
+        let paths: Vec<&str> = scripts.iter().map(|script| script.path.as_str()).collect();
+
+        assert_eq!(
+            paths,
+            vec![
+                "examples/basics/alpha.rhai",
+                "examples/basics/deep/alpha.rhai",
+                "examples/basics/zeta.rhai",
+                "examples/features/alpha.rhai",
+                "examples/beta.rhai",
+                "examples/zebra.rhai",
+            ]
+        );
+    }
+
+    #[test]
+    fn discover_scripts_outside_examples_excluded() {
+        let root = tempdir().expect("temp dir");
+        write_test_file(&root.path().join("examples").join("inside.rhai"));
+        write_test_file(&root.path().join("not_examples").join("outside.rhai"));
+
+        let roots = vec![root.path().canonicalize().expect("canonical root")];
+        let scripts = discover_example_scripts(&roots).expect("discover scripts");
+
+        assert_eq!(scripts.len(), 1);
+        assert_eq!(scripts[0].path, "examples/inside.rhai");
     }
 }

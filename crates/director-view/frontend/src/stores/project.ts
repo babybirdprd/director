@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { api, SceneInfo } from '@/api/director';
+import { api, SceneInfo, ScriptListItem } from '@/api/director';
 
 export interface ProjectState {
     // Script state
@@ -17,6 +17,7 @@ export interface ProjectState {
 
     // Timeline state
     scenes: SceneInfo[];
+    availableScripts: ScriptListItem[];
 
     // UI state
     isLoading: boolean;
@@ -26,6 +27,8 @@ export interface ProjectState {
     setScript: (content: string) => void;
     setScriptPath: (path: string | null) => void;
     loadScriptFromPath: (path: string) => Promise<void>;
+    loadAvailableScripts: () => Promise<void>;
+    selectScript: (path: string) => Promise<void>;
     runScript: () => Promise<void>;
     saveScript: () => Promise<void>;
     exportVideo: (outputPath: string) => Promise<void>;
@@ -80,6 +83,7 @@ export const useProjectStore = create<ProjectState>()(
             isPlaying: false,
             fps: 30,
             scenes: [],
+            availableScripts: [],
             isLoading: false,
             backendConnected: false,
 
@@ -105,6 +109,44 @@ export const useProjectStore = create<ProjectState>()(
                 } catch (e) {
                     set({
                         scriptError: e instanceof Error ? e.message : 'Failed to load file',
+                        isLoading: false,
+                    });
+                }
+            },
+
+            loadAvailableScripts: async () => {
+                try {
+                    const scripts = await api.listScripts();
+                    set({ availableScripts: scripts, scriptError: null });
+                } catch (e) {
+                    set({
+                        availableScripts: [],
+                        scriptError: e instanceof Error ? e.message : 'Failed to load script list',
+                    });
+                }
+            },
+
+            selectScript: async (path: string) => {
+                set({ isLoading: true, scriptError: null });
+                try {
+                    const [content, result] = await Promise.all([
+                        api.readFile(path),
+                        api.initFromPath(path),
+                    ]);
+                    const scenes = await api.getScenes();
+
+                    set({
+                        scriptContent: content,
+                        scriptPath: path,
+                        duration: result.duration,
+                        scenes,
+                        currentTime: 0,
+                        isScriptDirty: false,
+                        isLoading: false,
+                    });
+                } catch (e) {
+                    set({
+                        scriptError: e instanceof Error ? e.message : 'Failed to switch script',
                         isLoading: false,
                     });
                 }

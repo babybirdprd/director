@@ -22,6 +22,12 @@ export interface SceneInfo {
     name?: string;
 }
 
+export interface ScriptListItem {
+    path: string;
+    name: string;
+    group: string;
+}
+
 export interface ExportProgress {
     frame: number;
     totalFrames: number;
@@ -137,6 +143,19 @@ class DirectorApi {
 
         if (!res.ok) {
             return [];
+        }
+
+        return res.json();
+    }
+
+    /**
+     * List available Rhai scripts for quick switching.
+     */
+    async listScripts(): Promise<ScriptListItem[]> {
+        const res = await fetch(`${API_BASE}/scripts`);
+
+        if (!res.ok) {
+            throw await parseErrorResponse(res);
         }
 
         return res.json();

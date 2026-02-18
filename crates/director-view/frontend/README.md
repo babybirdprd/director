@@ -81,6 +81,7 @@ The frontend communicates with these backend endpoints:
 | `/init` | POST | Load script from content |
 | `/render?time=...` | GET | Render frame at time |
 | `/scenes` | GET | Get timeline scene info |
+| `/scripts` | GET | List available example Rhai scripts |
 | `/file?path=...` | GET | Read file contents |
 | `/health` | GET | Health check |
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { ChangeEvent, useCallback, useRef } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import { useProjectStore } from '@/stores/project';
 import { Play, FolderOpen, AlertCircle, Save } from 'lucide-react';
@@ -103,10 +103,12 @@ export function ScriptEditor() {
         scriptError,
         isScriptDirty,
         isLoading,
+        availableScripts,
         setScript,
         runScript,
         saveScript,
         loadScriptFromPath,
+        selectScript,
     } = useProjectStore();
 
     const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -142,12 +144,42 @@ export function ScriptEditor() {
         }
     }, [loadScriptFromPath]);
 
+    const handleScriptSelect = useCallback(
+        (event: ChangeEvent<HTMLSelectElement>) => {
+            const path = event.target.value;
+            if (path) {
+                selectScript(path);
+            }
+        },
+        [selectScript]
+    );
+
     return (
         <div className="flex flex-col h-full">
             {/* Toolbar */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-director-border bg-director-surface/50">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     <span className="text-sm text-director-text-muted">Script</span>
+                    <select
+                        value={scriptPath ?? ''}
+                        onChange={handleScriptSelect}
+                        className="bg-director-surface border border-director-border rounded px-2 py-1 text-xs max-w-[260px] truncate"
+                        title="Switch example script"
+                    >
+                        <option value="" disabled>
+                            {availableScripts.length > 0 ? 'Select script...' : 'No scripts found'}
+                        </option>
+                        {availableScripts.map((script) => {
+                            const label = script.group === 'root'
+                                ? script.name
+                                : `${script.group} / ${script.name}`;
+                            return (
+                                <option key={script.path} value={script.path}>
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </select>
                     {scriptPath && (
                         <span className="text-xs text-director-text-muted truncate max-w-[200px]" title={scriptPath}>
                             {scriptPath.split(/[/\\]/).pop()}
